@@ -1,4 +1,5 @@
-from typing import Any, Generator, NoReturn, TypedDict, cast
+from collections.abc import Generator
+from typing import Any, NoReturn, TypedDict, cast
 
 OP_TYPES: dict[str, str] = {
     "+": "ADD",
@@ -121,7 +122,7 @@ class Lexer:
         if self.current_char in ("<", ">", "=", "!", "?", ":", "&", "|"):
             return self.get_cmp()
 
-        self.error()
+        return self.error()
 
 
 class Parser:
@@ -137,8 +138,8 @@ class Parser:
     def error(self) -> NoReturn:
         raise ValueError("Invalid syntax", self.current_token)
 
-    def eat(self, token_type: str) -> None:
-        if self.current_token.type != token_type:
+    def eat(self, token_type: str | None = None) -> None:
+        if token_type and self.current_token.type != token_type:
             self.error()
         self.current_token = self.lexer.get_token()
 
@@ -220,16 +221,18 @@ class Parser:
             self.eat("CMP_GT")
             result = result > self.term()
 
-        while self.current_token.type in ("OP_AND", "OP_OR", "TERN"):
+        while self.current_token.type in ("OP_AND", "OP_OR"):
+            self.eat()
             token = self.current_token
+            next_result = self.parse_expression()
             if token.type == "OP_AND":
-                self.eat("OP_AND")
-                result = result and self.parse_expression()
+                result = result and next_result
             elif token.type == "OP_OR":
-                self.eat("OP_OR")
-                return result or self.parse_expression()
-            elif token.type == "TERN":
-                result = self.parse_conditional(result)
+                return result or next_result
+
+        token = self.current_token
+        if token.type == "TERN":
+            result = self.parse_conditional(result)
 
         return result
 
@@ -274,7 +277,9 @@ def parse(_expr: str, **variables: int) -> bool | int:
 
 
 def group(
-    plural_line: str, max: int = 999, per_group=5
+    plural_line: str,
+    max: int = 999,
+    per_group=5,
 ) -> Generator[GroupDict, None, None]:
     """
     Group numbers based on a plural line from a po file.

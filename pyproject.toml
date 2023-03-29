@@ -76,11 +76,6 @@ ignore = [
   "TRY",      # Consider code change
 ]
 
-[tool.pytest.ini_options]
-python_paths = ["pox"]
-python_files = ["tests.py"]
-filterwarnings = ["ignore::RuntimeWarning"]
-
 [tool.mypy]
 check_untyped_defs = true
 ignore_errors = false
