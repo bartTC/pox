@@ -156,9 +156,10 @@ class Parser:
             return cast(int, token.value)
         elif token.type == "VARIABLE":
             self.eat("VARIABLE")
-            if token.value not in self.variables:
-                raise ValueError(f"Variable '{token.value}' not defined")
-            return self.variables[token.value]
+            value = cast(str, token.value)
+            if value not in self.variables:
+                raise ValueError(f"Variable '{value}' not defined")
+            return self.variables[value]
         self.error()
 
     def term(self) -> bool | int:
