@@ -12,7 +12,7 @@ class SingularTranslation:
 @dataclass(frozen=True)
 class PluralTranslation:
     msgid: str
-    msgstr: dict[int, str]
+    msgstr: list[str]
 
 
 @dataclass(frozen=True)

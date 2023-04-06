@@ -4,6 +4,7 @@ from enum import Enum
 
 from .utils import box_message
 from .warnings import ConversionError as E
+from .warnings import ConversionErrorDescription as ED
 
 # Width of the help description
 ARGPARSE_TERMINAL_WIDTH = 78
@@ -41,7 +42,7 @@ class BaseConverter:
         sys.stdout.write(f"{icon}{message}\n")
         sys.stdout.flush()
 
-    def display_messages(self, messages: list[E]) -> None:
+    def display_messages(self, messages: list[ED]) -> None:
         issues = "\n\n".join([box_message(w.value) for w in set(messages)])
         sys.stderr.write(
             f"\n⚠️ There have been issues during the conversion:\n\n{issues}\n",

@@ -100,6 +100,8 @@ class Po2ExcelConverter(BaseConverter):
         item: polib.POEntry
 
         for item in iter(pofile):
+            t: SingularTranslation | PluralTranslation
+
             # This item has multiple pluralization forms
             if item.msgstr_plural:
                 t = PluralTranslation(

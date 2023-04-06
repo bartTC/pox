@@ -121,10 +121,10 @@ class SpreadsheetGenerator:
         for row in data:
             ws.append([i[0] for i in row])
 
-        # Write out the Excel spreadsheet and return it's generated filename.
-        filename = self.outdir / filename.format(
+        # Write out the Excel spreadsheet and return its generated filename.
+        fn_path = self.outdir / filename.format(
             lang=context.language,
             date=context.created.strftime("%Y-%m-%d"),
         )
-        wb.save(filename)
-        return filename
+        wb.save(fn_path)
+        return fn_path
