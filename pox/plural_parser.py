@@ -148,7 +148,7 @@ class Parser:
 
         if token.type == "LPAREN":
             self.eat("LPAREN")
-            result = self.parse_expression()
+            result = self.parse()
             self.eat("RPAREN")
             return result
         elif token.type == "INTEGER":
@@ -223,26 +223,28 @@ class Parser:
             result = result > self.term()
 
         while self.current_token.type in ("OP_AND", "OP_OR"):
-            self.eat()
             token = self.current_token
+            self.eat()
             next_result = self.parse_expression()
             if token.type == "OP_AND":
                 result = result and next_result
             elif token.type == "OP_OR":
                 return result or next_result
 
-        token = self.current_token
-        if token.type == "TERN":
-            result = self.parse_conditional(result)
-
         return result
 
-    def parse_conditional(self, condition: bool | int) -> bool | int:
-        self.eat("TERN")
-        if_true = self.parse_expression()
-        self.eat("TERN_ELSE")
-        if_false = self.parse_expression()
-        return if_true if condition else if_false
+    def parse(self) -> bool | int:
+        result = self.parse_expression()
+
+        if self.current_token.type == "TERN":
+            self.eat("TERN")
+            if_true = self.parse()
+            if result:
+                return if_true
+            self.eat("TERN_ELSE")
+            return self.parse()
+
+        return result
 
 
 def parse_line(line: str) -> tuple[int, str]:
@@ -274,7 +276,7 @@ def parse(_expr: str, **variables: int) -> bool | int:
     """
     lexer = Lexer(_expr)
     parser = Parser(lexer, **variables)
-    return parser.parse_expression()
+    return parser.parse()
 
 
 def group(
