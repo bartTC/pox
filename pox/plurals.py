@@ -11,6 +11,7 @@ would require executing arbitrary code from a po file.
 
 See https://www.gnu.org/software/gettext/manual/html_node/Plural-forms.html
 """
+
 import re
 
 RE_PLURAL_COUNT = re.compile(r"nplurals=(?P<num>\d+);")
@@ -43,4 +44,4 @@ def get_plural_hints(plural_form: str | None) -> dict[int, str] | None:
     # For now, generate a list of Plural forms.
     # @TODO: Generate a better list in the format "n = 0, 1, 2 ..."
     num = int(match.groupdict()["num"])
-    return {i: f"Plural Form {i+1}" for i in range(num)}
+    return {i: f"Plural Form {i + 1}" for i in range(num)}

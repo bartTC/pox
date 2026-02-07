@@ -17,8 +17,7 @@ license = {text = "MIT"}
 dev = [
     "django>=4.1.7",
     "pytest>=7.2.2",
-    "black==23.1.0",
-    "ruff==0.0.254",
+    "ruff>=0.15.0",
     "ipdb>=0.13.11",
 ]
 
@@ -32,14 +31,11 @@ build-backend = "pdm.pep517.api"
 
 [tool.pdm]
 
-[tool.black]
-target-version = ['py311']
-include = '\.pyi?$'
-exclude = "migrations"
-
 [tool.ruff]
 target-version = "py311"
 exclude = ["migrations"]
+
+[tool.ruff.lint]
 select = ["ALL"]
 ignore = [
   "A",        # Variable/Argument/Class attribute ... is shadowing a python builtin
@@ -68,11 +64,12 @@ ignore = [
   "RET504",   # Unnecessary variable assignment before `return` statement
   "RET505",   # Unnecessary `elif` after `return` statement
   "RUF005",   # Consider `(list, *list) instead of concatenation
+  "RUF012",   # False positive on Enum members
   "S101",     # Use of `assert` detected
   "S324",     # Probable use of insecure hash functions in `hashlib`: `md5`
-  "SLF001",   # Private member accessed"
-  "TCH002",   # Move third-party import into a type-checking block
-  "TID252",   # Relative imports from parent modules are banned (from ..foo import bar)"
+  "SLF001",   # Private member accessed
+  "TC002",    # Move third-party import into a type-checking block
+  "TID252",   # Relative imports from parent modules are banned (from ..foo import bar)
   "TRY",      # Consider code change
 ]
 

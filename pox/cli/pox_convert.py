@@ -1,12 +1,13 @@
 """
 Convert PO to Excel files
 """
+
 import argparse
 import asyncio
-import glob
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import ClassVar
 
 import polib
 
@@ -26,8 +27,8 @@ from ..warnings import ConversionErrorDescription as D
 
 class Po2ExcelConverter(BaseConverter):
     options: argparse.Namespace
-    po_files: list[Path] = []
-    warning_descriptions: list[D] = []
+    po_files: ClassVar[list[Path]] = []
+    warning_descriptions: ClassVar[list[D]] = []
 
     def __init__(self, options: argparse.Namespace):
         """
@@ -43,8 +44,7 @@ class Po2ExcelConverter(BaseConverter):
 
         # Glob and gather all given po files and check for their existence.
         for po_glob in options.po_file:
-            for path in glob.glob(po_glob, recursive=True):
-                p = Path(path)
+            for p in Path().glob(po_glob):
                 if p.is_dir():
                     self.warning(message=E.FILE_IS_FOLDER.value.format(p=p))
                     continue
@@ -99,7 +99,19 @@ class Po2ExcelConverter(BaseConverter):
         messages: list[Message] = []
         item: polib.POEntry
 
+        fuzzy_entries = pofile.fuzzy_entries()
+
+        if self.options.fuzzy == "stop" and fuzzy_entries:
+            self.fail(
+                f'Found {len(fuzzy_entries)} fuzzy entries in "{path}". '
+                "Remove them or use --fuzzy=ignore/include.",
+            )
+
         for item in iter(pofile):
+            # Handle fuzzy entries
+            if "fuzzy" in item.flags and self.options.fuzzy == "ignore":
+                continue
+
             # This item has multiple pluralization forms
             if item.msgstr_plural:
                 t = PluralTranslation(
@@ -141,7 +153,7 @@ class Po2ExcelConverter(BaseConverter):
 def main():
     parser = argparse.ArgumentParser(
         prog="pox-convert",
-        formatter_class=lambda prog: ArgumentFormatter(prog),
+        formatter_class=ArgumentFormatter,
         description="""
             Convert .po files to Excel Spreadsheets. Set one or more .po files:
 
@@ -163,7 +175,7 @@ def main():
         "-o",
         "--outdir",
         type=Path,
-        default=Path("."),
+        default=Path(),
         help="The path to store the generated Excel spreadsheets. Default: .",
     )
     parser.add_argument(

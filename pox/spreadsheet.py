@@ -10,6 +10,22 @@ from .datastructures import Message, SpreadsheetContext
 from .styles import SpreadsheetStyles as S
 
 
+def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
+    """
+    Apply styles from (value, style) tuples to the cells of the given row.
+    """
+    for col_idx, cell_data in enumerate(row_data, start=1):
+        if not isinstance(cell_data, tuple) or len(cell_data) < 2:
+            continue
+        style = cell_data[1]
+        if style is None:
+            continue
+        cell = ws.cell(row=row_idx, column=col_idx)
+        style_dict = style.value
+        for attr, value in style_dict.items():
+            setattr(cell, attr, value)
+
+
 class SpreadsheetGenerator:
     outdir: Path
 
@@ -19,6 +35,7 @@ class SpreadsheetGenerator:
     def get_tabledata(
         self,
         messages: list[Message],
+        context: SpreadsheetContext,
     ) -> list[Any]:
         """
         Generate a Matrix array of messages for a table:
@@ -30,52 +47,83 @@ class SpreadsheetGenerator:
 
         And attach a format to each cell.
         """
-        # The number of plural forms define the overall columns. Plural forms 0
-        # would mean we have only singular, but `plural forms 1` would also do,
-        # since the first plural form is the singular form.
-        #
-        # id | singular | translation | space | plural |  plural translation * n
-        # ^    ^          form idx 0    ^       ^         form idx 1+
+        plural_hints = context.plural_form_hints or {}
+        num_plurals = len(plural_hints)
+        has_plurals = num_plurals >= 2 and any(m.is_plural for m in messages)
+
+        # Extra columns beyond the base "Translation" column (which holds form 0)
+        extra_cols = num_plurals - 1 if has_plurals else 0
+
         fill_out_above = [
             ("", None),
             ("", None),
             ("", None),
-            ("Please fill out the yellow fields ⤵️", S.FILL_HINT),
-        ]
+            ("Please fill out the yellow fields \u2935\ufe0f", S.FILL_HINT),
+        ] + [("", None)] * extra_cols
 
         fill_out_below = [
             ("", None),
             ("", None),
             ("", None),
-            ("Please fill out the yellow fields ⤴", S.FILL_HINT),
-        ]
+            ("Please fill out the yellow fields \u2934", S.FILL_HINT),
+        ] + [("", None)] * extra_cols
+
+        base_translation_label = "Translation"
+        if has_plurals:
+            hint = plural_hints.get(0, "Singular")
+            base_translation_label = f"Translation ({hint})"
 
         header = [
             ("id", S.HEADER_LIGHT),
             ("Context", S.HEADER),
             ("Singular Form", S.HEADER),
-            ("Translation", S.HEADER),
+            (base_translation_label, S.HEADER),
         ]
+
+        # Add extra plural translation headers (forms 1, 2, ...)
+        if has_plurals:
+            for i in range(1, num_plurals):
+                hint = plural_hints.get(i, f"Plural Form {i + 1}")
+                header.append((f"Translation ({hint})", S.HEADER))
 
         data = []
         for i, m in enumerate(messages):
             msg_str_style = S.MSG_STR
             if m.obsolete:
                 msg_str_style = S.MSG_STR_OBSOLETE
-            elif m.translation.msgstr == "":
+            elif not m.is_plural and m.translation.msgstr == "":
                 msg_str_style = S.MSG_STR_EMPTY
 
             if m.is_plural:
-                pass
+                # For plural messages, the first translation is form 0 (singular),
+                # the second is form 1 (plural), and any additional go into extra cols.
+                msgstr_dict = m.translation.msgstr
 
+                # Check if any plural form is empty
+                if any(v == "" for v in msgstr_dict.values()):
+                    msg_str_style = S.MSG_STR_EMPTY
+
+                row = [
+                    (i + 1, S.ID),
+                    ("obsolete" if m.obsolete else m.context, S.CONTEXT),
+                    (m.translation.msgid, S.MSG_ID),
+                    (msgstr_dict.get(0, ""), msg_str_style),
+                ]
+                row.extend(
+                    (msgstr_dict.get(pi, ""), msg_str_style)
+                    for pi in range(1, num_plurals)
+                )
+
+                data.append(row)
             else:
                 data.append(
-                    (
+                    [
                         (i + 1, S.ID),
                         ("obsolete" if m.obsolete else m.context, S.CONTEXT),
                         (m.translation.msgid, S.MSG_ID),
                         (m.translation.msgstr, msg_str_style),
-                    ),
+                    ]
+                    + [("", None)] * extra_cols,
                 )
 
         return [
@@ -87,7 +135,7 @@ class SpreadsheetGenerator:
 
     def generate(self, filename: str, context: SpreadsheetContext) -> Path:
         """
-        Generates the
+        Generates the spreadsheet file.
         """
         wb = Workbook()
 
@@ -113,15 +161,27 @@ class SpreadsheetGenerator:
         ws.sheet_view.showGridLines = False
         wm.sheet_view.showGridLines = False
 
-        # Generate the main spreadsheet for singular translations
+        # Generate the main spreadsheet for translations
         data = self.get_tabledata(
             messages=context.messages,
+            context=context,
         )
 
-        for row in data:
-            ws.append([i[0] for i in row])
+        for row_idx, row in enumerate(data, start=1):
+            ws.append([cell[0] for cell in row])
+            apply_styles(ws, row_idx, row)
 
-        # Write out the Excel spreadsheet and return it's generated filename.
+        # Set column widths
+        ws.column_dimensions["A"].width = 6  # id
+        ws.column_dimensions["B"].width = 20  # Context
+        ws.column_dimensions["C"].width = 40  # Singular Form
+        ws.column_dimensions["D"].width = 40  # Translation
+        # Extra plural columns
+        for i in range(4, ws.max_column):
+            col_letter = chr(ord("A") + i)
+            ws.column_dimensions[col_letter].width = 40
+
+        # Write out the Excel spreadsheet and return its generated filename.
         filename = self.outdir / filename.format(
             lang=context.language,
             date=context.created.strftime("%Y-%m-%d"),
