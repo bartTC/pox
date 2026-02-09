@@ -1,0 +1,14 @@
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] "%d Gegenstand"
+msgstr[1] "%d Gegenstaende"
+
+msgid "Hello"
+msgstr "Hallo"

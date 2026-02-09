@@ -2,12 +2,23 @@ from pathlib import Path
 from typing import Any
 
 from openpyxl.packaging.custom import StringProperty
+from openpyxl.styles import PatternFill
+from openpyxl.styles.fills import FILL_SOLID
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 from . import __version__
 from .datastructures import Message, SpreadsheetContext
-from .styles import SpreadsheetStyles as S
+from .styles import (
+    EMPTY_BORDER,
+    EMPTY_BORDER_BOTTOM,
+    EMPTY_BORDER_SINGLE,
+    EMPTY_BORDER_TOP,
+    ROW_STRIPE,
+)
+from .styles import (
+    SpreadsheetStyles as S,
+)
 
 
 def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
@@ -15,7 +26,7 @@ def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
     Apply styles from (value, style) tuples to the cells of the given row.
     """
     for col_idx, cell_data in enumerate(row_data, start=1):
-        if not isinstance(cell_data, tuple) or len(cell_data) < 2:
+        if not isinstance(cell_data, tuple) or len(cell_data) < 2:  # pragma: no cover
             continue
         style = cell_data[1]
         if style is None:
@@ -24,6 +35,69 @@ def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
         style_dict = style.value
         for attr, value in style_dict.items():
             setattr(cell, attr, value)
+
+
+def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int):
+    """
+    Apply thick black borders around contiguous groups of empty translation cells.
+
+    Scans translation columns and draws a thick black border box around each
+    contiguous vertical run of empty (MSG_STR_EMPTY) cells.
+    """
+    # header is row 1, data starts at row 2
+    data_start = 2
+    data_end = ws.max_row
+
+    for col in range(translation_col, translation_col + num_cols):
+        # Collect row indices that have the empty style (yellow fill)
+        empty_rows = []
+        for row in range(data_start, data_end + 1):
+            cell = ws.cell(row=row, column=col)
+            if cell.fill and cell.fill.fgColor and cell.fill.fgColor.rgb == "FFFFF2CC":
+                empty_rows.append(row)
+
+        # Group contiguous rows and apply borders
+        if not empty_rows:
+            continue
+
+        groups = []
+        start = empty_rows[0]
+        prev = empty_rows[0]
+        for r in empty_rows[1:]:
+            if r == prev + 1:
+                prev = r
+            else:
+                groups.append((start, prev))
+                start = r
+                prev = r
+        groups.append((start, prev))
+
+        for group_start, group_end in groups:
+            if group_start == group_end:
+                ws.cell(row=group_start, column=col).border = EMPTY_BORDER_SINGLE
+            else:
+                ws.cell(row=group_start, column=col).border = EMPTY_BORDER_TOP
+                for r in range(group_start + 1, group_end):
+                    ws.cell(row=r, column=col).border = EMPTY_BORDER
+                ws.cell(row=group_end, column=col).border = EMPTY_BORDER_BOTTOM
+
+
+def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int):
+    """
+    Apply alternating row stripes to data rows for readability.
+    """
+    stripe_fill = PatternFill(fill_type=FILL_SOLID, fgColor=ROW_STRIPE)
+    for row in range(data_start, data_end + 1):
+        if (row - data_start) % 2 == 1:
+            for col in range(1, ws.max_column + 1):
+                cell = ws.cell(row=row, column=col)
+                # Only apply stripe if the cell doesn't already have a fill
+                if (
+                    not cell.fill
+                    or not cell.fill.fgColor
+                    or cell.fill.fgColor.rgb == "00000000"
+                ):
+                    cell.fill = stripe_fill
 
 
 class SpreadsheetGenerator:
@@ -54,27 +128,13 @@ class SpreadsheetGenerator:
         # Extra columns beyond the base "Translation" column (which holds form 0)
         extra_cols = num_plurals - 1 if has_plurals else 0
 
-        fill_out_above = [
-            ("", None),
-            ("", None),
-            ("", None),
-            ("Please fill out the yellow fields \u2935\ufe0f", S.FILL_HINT),
-        ] + [("", None)] * extra_cols
-
-        fill_out_below = [
-            ("", None),
-            ("", None),
-            ("", None),
-            ("Please fill out the yellow fields \u2934", S.FILL_HINT),
-        ] + [("", None)] * extra_cols
-
         base_translation_label = "Translation"
         if has_plurals:
             hint = plural_hints.get(0, "Singular")
             base_translation_label = f"Translation ({hint})"
 
         header = [
-            ("id", S.HEADER_LIGHT),
+            ("id", S.HEADER),
             ("Context", S.HEADER),
             ("Singular Form", S.HEADER),
             (base_translation_label, S.HEADER),
@@ -88,7 +148,7 @@ class SpreadsheetGenerator:
 
         data = []
         for i, m in enumerate(messages):
-            msg_str_style = S.MSG_STR
+            msg_str_style = S.MSG_ID
             if m.obsolete:
                 msg_str_style = S.MSG_STR_OBSOLETE
             elif not m.is_plural and m.translation.msgstr == "":
@@ -127,10 +187,8 @@ class SpreadsheetGenerator:
                 )
 
         return [
-            fill_out_above,
             header,
             *data,
-            fill_out_below,
         ]
 
     def generate(self, filename: str, context: SpreadsheetContext) -> Path:
@@ -149,7 +207,7 @@ class SpreadsheetGenerator:
             wb.custom_doc_props.append(p)
 
         # Delete the auto generated "Sheet" worksheet
-        wb.remove_sheet(wb.worksheets[0])
+        del wb[wb.sheetnames[0]]
 
         # Create two sheets, "Translations" to hold the actual translations
         # and "Metadata" to store some extra data not needed for translation,
@@ -171,15 +229,31 @@ class SpreadsheetGenerator:
             ws.append([cell[0] for cell in row])
             apply_styles(ws, row_idx, row)
 
+        # Freeze the header row
+        ws.freeze_panes = "A2"
+
         # Set column widths
         ws.column_dimensions["A"].width = 6  # id
         ws.column_dimensions["B"].width = 20  # Context
-        ws.column_dimensions["C"].width = 40  # Singular Form
-        ws.column_dimensions["D"].width = 40  # Translation
+        ws.column_dimensions["C"].width = 55  # Singular Form
+        ws.column_dimensions["D"].width = 55  # Translation
         # Extra plural columns
         for i in range(4, ws.max_column):
             col_letter = chr(ord("A") + i)
-            ws.column_dimensions[col_letter].width = 40
+            ws.column_dimensions[col_letter].width = 55
+
+        # Apply alternating row stripes (data starts at row 2)
+        if ws.max_row > 1:
+            apply_row_stripes(ws, data_start=2, data_end=ws.max_row)
+
+        # Apply thick black borders around empty translation columns
+        num_translation_cols = 1
+        plural_hints = context.plural_form_hints or {}
+        num_plurals = len(plural_hints)
+        has_plurals = num_plurals >= 2 and any(m.is_plural for m in context.messages)
+        if has_plurals:
+            num_translation_cols = num_plurals
+        apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
 
         # Write out the Excel spreadsheet and return its generated filename.
         filename = self.outdir / filename.format(

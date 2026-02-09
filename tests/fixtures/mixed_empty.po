@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Hello"
+msgstr "Hallo"
+
+msgid "Goodbye"
+msgstr ""
+
+msgid "World"
+msgstr "Welt"
+
+msgid "Foo"
+msgstr ""
+
+msgid "Bar"
+msgstr ""
+
+msgid "Baz"
+msgstr ""
+
+msgid "Done"
+msgstr "Fertig"

@@ -1,0 +1,12 @@
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+
+msgid "Hello"
+msgstr "Hallo"
+
+#, fuzzy
+msgid "Maybe"
+msgstr "Vielleicht"

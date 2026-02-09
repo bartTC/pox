@@ -1,0 +1,11 @@
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+
+msgid "Hello"
+msgstr "Hallo"
+
+#~ msgid "Old"
+#~ msgstr "Alt"

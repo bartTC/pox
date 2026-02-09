@@ -57,11 +57,11 @@ class Excel2PoConverter(BaseConverter):
         }
 
         rows = list(ws.iter_rows(values_only=True))
-        if len(rows) < 3:
+        if len(rows) < 2:
             self.fail(f'Not enough rows in "{path}".')
 
-        # Row 0 = fill hint above, Row 1 = header, Row -1 = fill hint below
-        header_row = rows[1]
+        # Row 0 = header, rows 1+ = data
+        header_row = rows[0]
 
         # Determine number of translation columns
         # Columns: id, Context, Singular Form, Translation, [extra plural cols...]
@@ -69,7 +69,7 @@ class Excel2PoConverter(BaseConverter):
             1 for h in header_row[3:] if h and str(h).startswith("Translation")
         )
 
-        data_rows = rows[2:-1]  # Skip fill hints and header
+        data_rows = rows[1:]  # Skip header
 
         for row in data_rows:
             if not row or row[0] is None or row[0] == "":
