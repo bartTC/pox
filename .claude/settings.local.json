@@ -3,7 +3,9 @@
     "allow": [
       "Bash(python -m pytest:*)",
       "Bash(uv run pytest:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
     ]
   }
 }
