@@ -6,7 +6,7 @@
 
 Convert `.po` (gettext) files to Excel spreadsheets and back. Supports fuzzy entries and multiple plural forms.
 
-![Screenshot](screenshot.png)
+![Screenshot](https://github.com/bartTC/pox/raw/main/screenshot.png)
 
 ## Usage
 
