@@ -21,13 +21,17 @@ class ArgumentFormatter(
         super().__init__(prog, **kwargs)
 
 
+class ConverterError(Exception):
+    """Raised to abort conversion with an error message."""
+
+
 class BaseConverter:
     def fail(self, message: str | E, icon: str | None = "❌️") -> None:
         icon = f"{icon} " if icon else ""
         message = message.value if isinstance(message, Enum) else message
         sys.stderr.write(f"{icon}{message}\n")
         sys.stderr.flush()
-        sys.exit(1)
+        raise ConverterError(message)
 
     def warning(self, message: str | E, icon: str | None = "⚠️") -> None:
         icon = f"{icon} " if icon else ""

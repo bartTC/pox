@@ -11,7 +11,7 @@ from typing import ClassVar
 
 import polib
 
-from ..base import ArgumentFormatter, BaseConverter
+from ..base import ArgumentFormatter, BaseConverter, ConverterError
 from ..datastructures import (
     Message,
     PluralTranslation,
@@ -235,8 +235,15 @@ def main():
     )
     options = parser.parse_args()
 
-    convert = Po2ExcelConverter(options=options)
-    asyncio.run(convert.run())
+    try:
+        convert = Po2ExcelConverter(options=options)
+    except ConverterError:
+        sys.exit(1)
+
+    try:
+        asyncio.run(convert.run())
+    except* ConverterError:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
