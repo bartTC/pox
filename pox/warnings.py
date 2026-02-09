@@ -1,6 +1,4 @@
-"""
-Convert PO to Excel files
-"""
+"""Warning and error enumerations for pox conversions."""
 
 import enum
 
@@ -8,6 +6,8 @@ from .utils import dedent
 
 
 class ConversionError(enum.Enum):
+    """Error messages for conversion failures."""
+
     LANGUAGE_WITH_GLOB = (
         'The "language" argument can only be used with a single po file.'
     )
@@ -18,6 +18,8 @@ class ConversionError(enum.Enum):
 
 
 class ConversionErrorDescription(enum.Enum):
+    """Detailed descriptions for conversion errors."""
+
     DECODE_ERROR = dedent(
         """
         The po file is unreadable.

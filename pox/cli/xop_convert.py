@@ -1,6 +1,4 @@
-"""
-Convert Excel to PO files
-"""
+"""Convert Excel to PO files."""
 
 import argparse
 import sys
@@ -9,24 +7,29 @@ from pathlib import Path
 import polib
 from openpyxl import load_workbook
 
-from ..base import ArgumentFormatter, BaseConverter
-from ..utils import dedent
+from pox.base import ArgumentFormatter, BaseConverter
+from pox.utils import dedent
 
 
 class Excel2PoConverter(BaseConverter):
+    """Convert Excel spreadsheets back to PO files."""
+
     options: argparse.Namespace
 
-    def __init__(self, options: argparse.Namespace):
+    def __init__(self, options: argparse.Namespace) -> None:
+        """Initialize converter and validate output directory."""
         self.options = options
 
         if options.outdir and not options.outdir.is_dir():
             self.fail(f'The output directory "{options.outdir}" does not exist.')
 
-    def run(self):
+    def run(self) -> None:
+        """Convert all provided xlsx files to PO format."""
         for xlsx_path in self.options.xlsx_file:
             self.convert_xlsx(Path(xlsx_path))
 
-    def convert_xlsx(self, path: Path) -> None:
+    def convert_xlsx(self, path: Path) -> None:  # noqa: C901
+        """Parse an xlsx file and write a corresponding PO file."""
         wb = load_workbook(str(path), read_only=True, data_only=True)
 
         # Read custom properties for metadata
@@ -115,7 +118,8 @@ class Excel2PoConverter(BaseConverter):
         self.ok(f"Created {out_path}")
 
 
-def main():
+def main() -> None:
+    """Run the Excel-to-PO CLI command."""
     parser = argparse.ArgumentParser(
         prog="xop-convert",
         formatter_class=ArgumentFormatter,

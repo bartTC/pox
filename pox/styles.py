@@ -1,3 +1,5 @@
+"""Spreadsheet styles for pox."""
+
 from enum import Enum
 
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -54,11 +56,9 @@ EMPTY_BORDER_SINGLE = Border(
 
 
 class SpreadsheetStyles(Enum):
-    """
-    The openpyxl cell styles used in the spreadsheet.
-    """
+    """Define the openpyxl cell styles used in the spreadsheet."""
 
-    SHEET_HEADLINE = {
+    SHEET_HEADLINE = {  # noqa: RUF012
         "fill": PatternFill(fill_type=FILL_SOLID, fgColor=RED_BG),
         "font": Font(
             name=FONT_FAMILY,
@@ -75,35 +75,35 @@ class SpreadsheetStyles(Enum):
         ),
     }
 
-    ID = {
+    ID = {  # noqa: RUF012
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, color=DARK_GRAY),
         "alignment": DEFAULT_ALIGNMENT,
     }
 
-    HEADER = {
+    HEADER = {  # noqa: RUF012
         "fill": PatternFill(fill_type=FILL_SOLID, fgColor=BLACK),
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, bold=True, color=WHITE),
         "alignment": DEFAULT_ALIGNMENT,
     }
 
-    CONTEXT = {
+    CONTEXT = {  # noqa: RUF012
         "fill": PatternFill(fill_type=FILL_SOLID, fgColor=LIGHT_GRAY),
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, italic=True, color=DARK_GRAY),
         "alignment": DEFAULT_ALIGNMENT,
     }
 
-    MSG_ID = {
+    MSG_ID = {  # noqa: RUF012
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, color=BLACK),
         "alignment": DEFAULT_ALIGNMENT,
     }
 
-    MSG_STR_EMPTY = {
+    MSG_STR_EMPTY = {  # noqa: RUF012
         "fill": PatternFill(fill_type=FILL_SOLID, fgColor=YELLOW),
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, color=BLACK),
         "alignment": DEFAULT_ALIGNMENT,
     }
 
-    MSG_STR_OBSOLETE = {
+    MSG_STR_OBSOLETE = {  # noqa: RUF012
         "font": Font(
             name=FONT_FAMILY,
             size=FONT_SIZE,

@@ -1,3 +1,5 @@
+"""Spreadsheet generation for pox."""
+
 from pathlib import Path
 from typing import Any
 
@@ -21,10 +23,8 @@ from .styles import (
 )
 
 
-def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
-    """
-    Apply styles from (value, style) tuples to the cells of the given row.
-    """
+def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
+    """Apply styles from (value, style) tuples to the cells of the given row."""
     for col_idx, cell_data in enumerate(row_data, start=1):
         if not isinstance(cell_data, tuple) or len(cell_data) < 2:  # pragma: no cover
             continue
@@ -37,7 +37,7 @@ def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple):
             setattr(cell, attr, value)
 
 
-def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int):
+def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int) -> None:
     """
     Apply thick black borders around contiguous groups of empty translation cells.
 
@@ -82,10 +82,8 @@ def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int):
                 ws.cell(row=group_end, column=col).border = EMPTY_BORDER_BOTTOM
 
 
-def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int):
-    """
-    Apply alternating row stripes to data rows for readability.
-    """
+def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int) -> None:
+    """Apply alternating row stripes to data rows for readability."""
     stripe_fill = PatternFill(fill_type=FILL_SOLID, fgColor=ROW_STRIPE)
     for row in range(data_start, data_end + 1):
         if (row - data_start) % 2 == 1:
@@ -101,9 +99,12 @@ def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int):
 
 
 class SpreadsheetGenerator:
+    """Generate Excel spreadsheets from translation data."""
+
     outdir: Path
 
-    def __init__(self, outdir: Path):
+    def __init__(self, outdir: Path) -> None:
+        """Initialize generator with output directory."""
         self.outdir = outdir
 
     def get_tabledata(
@@ -112,14 +113,14 @@ class SpreadsheetGenerator:
         context: SpreadsheetContext,
     ) -> list[Any]:
         """
-        Generate a Matrix array of messages for a table:
+        Generate a matrix array of messages for a table.
 
         id  Context     Singular Form   Translation
          1              Hello World     Hallo Welt
          2  Keep short  Sausage         Wurst
          3  obsolete    ~~Nudel~~       ~~Noodle~~
 
-        And attach a format to each cell.
+        Attach a format to each cell.
         """
         plural_hints = context.plural_form_hints or {}
         num_plurals = len(plural_hints)
@@ -192,9 +193,7 @@ class SpreadsheetGenerator:
         ]
 
     def generate(self, filename: str, context: SpreadsheetContext) -> Path:
-        """
-        Generates the spreadsheet file.
-        """
+        """Generate the spreadsheet file."""
         wb = Workbook()
 
         # Attach the language as a custom property

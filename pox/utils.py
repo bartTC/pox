@@ -1,18 +1,18 @@
+"""Utility functions for pox."""
+
 import textwrap
 
 
 def dedent(text: str) -> str:
-    """
-    Dedents the given text and removes leading and trailing whitespace.
-    """
+    """Dedent the given text and remove leading and trailing whitespace."""
     return textwrap.dedent(text).strip()
 
 
 def box_message(text: str) -> str:
     """
-    ╭ Add the line on the left to the given messge.
-    │
-    ╽ The last line is thicker.
+    Add a decorative line on the left side of the given message.
+
+    The last line uses a thicker marker.
     """
     lines = text.splitlines(keepends=True)
 
@@ -29,9 +29,7 @@ def box_message(text: str) -> str:
 
 
 def remove_control_characters(s: str) -> str:
-    """
-    Remove control characters and whitespace from the string.
-    """
+    """Remove control characters and whitespace from the string."""
     replace = ["\\", "\n", "\r", "\t", " "]
     for r in replace:
         s = s.replace(r, "")

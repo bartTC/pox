@@ -1,6 +1,4 @@
-"""
-Convert PO to Excel files
-"""
+"""Convert PO to Excel files."""
 
 import argparse
 import asyncio
@@ -11,31 +9,29 @@ from typing import ClassVar
 
 import polib
 
-from ..base import ArgumentFormatter, BaseConverter, ConverterError
-from ..datastructures import (
+from pox.base import ArgumentFormatter, BaseConverter, ConverterError
+from pox.datastructures import (
     Message,
     PluralTranslation,
     SingularTranslation,
     SpreadsheetContext,
 )
-from ..plurals import get_plural_hints
-from ..spreadsheet import SpreadsheetGenerator
-from ..utils import dedent
-from ..warnings import ConversionError as E
-from ..warnings import ConversionErrorDescription as D
+from pox.plurals import get_plural_hints
+from pox.spreadsheet import SpreadsheetGenerator
+from pox.utils import dedent
+from pox.warnings import ConversionError as E
+from pox.warnings import ConversionErrorDescription as D
 
 
 class Po2ExcelConverter(BaseConverter):
+    """Convert PO files to Excel spreadsheets."""
+
     options: argparse.Namespace
     po_files: ClassVar[list[Path]] = []
     warning_descriptions: ClassVar[list[D]] = []
 
-    def __init__(self, options: argparse.Namespace):
-        """
-        Create a new instance of the .po to Excel converter and do some preflight
-        checks, that argparse couldn't catch yet. We do also gather all .po files
-        here.
-        """
+    def __init__(self, options: argparse.Namespace) -> None:
+        """Create a new converter instance and run preflight checks."""
         self.options = options
 
         # Make sure, the output directory exists and is a directory
@@ -55,10 +51,8 @@ class Po2ExcelConverter(BaseConverter):
         if options.language and len(self.po_files) > 1:
             self.fail(E.LANGUAGE_WITH_GLOB)
 
-    async def run(self):
-        """
-        Convert every po file to spreadsheets.
-        """
+    async def run(self) -> None:
+        """Convert every po file to spreadsheets."""
         async with asyncio.TaskGroup() as tg:
             for path in sorted(self.po_files):
                 tg.create_task(self.convert_po_file(path))
@@ -80,7 +74,7 @@ class Po2ExcelConverter(BaseConverter):
             self.warning(E.FILE_UNREADABLE.value.format(p=path))
             self.warning_descriptions.append(D.DECODE_ERROR)
             return
-        except Exception:
+        except Exception:  # noqa: BLE001 - polib can raise various unpredictable errors
             # Any other exception with polib.
             self.warning(E.FILE_UNREADABLE.value.format(p=path))
             return
@@ -150,7 +144,8 @@ class Po2ExcelConverter(BaseConverter):
         self.ok(f"Created {filename}")
 
 
-def main():
+def main() -> None:
+    """Run the PO-to-Excel CLI command."""
     parser = argparse.ArgumentParser(
         prog="pox-convert",
         formatter_class=ArgumentFormatter,
