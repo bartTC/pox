@@ -95,17 +95,26 @@ def mixed_empty_po() -> Path:
     return FIXTURES / "mixed_empty.po"
 
 
+def _generate_xlsx(tmp_path: Path, po_path: Path) -> Path:
+    """Generate an xlsx from a PO fixture file."""
+    context = build_context(po_path)
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    return gen.generate(filename="test_{lang}.xlsx", context=context)
+
+
 @pytest.fixture
 def singular_xlsx(tmp_path: Path, singular_po: Path) -> Path:
     """Generate an xlsx from the singular PO fixture."""
-    context = build_context(singular_po)
-    gen = SpreadsheetGenerator(outdir=tmp_path)
-    return gen.generate(filename="test_{lang}.xlsx", context=context)
+    return _generate_xlsx(tmp_path, singular_po)
 
 
 @pytest.fixture
 def plurals_xlsx(tmp_path: Path, plurals_po: Path) -> Path:
     """Generate an xlsx from the plurals PO fixture."""
-    context = build_context(plurals_po)
-    gen = SpreadsheetGenerator(outdir=tmp_path)
-    return gen.generate(filename="test_{lang}.xlsx", context=context)
+    return _generate_xlsx(tmp_path, plurals_po)
+
+
+@pytest.fixture
+def no_language_xlsx(tmp_path: Path, no_language_po: Path) -> Path:
+    """Generate an xlsx from the no-language PO fixture."""
+    return _generate_xlsx(tmp_path, no_language_po)

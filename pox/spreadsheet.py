@@ -208,15 +208,10 @@ class SpreadsheetGenerator:
         # Delete the auto generated "Sheet" worksheet
         del wb[wb.sheetnames[0]]
 
-        # Create two sheets, "Translations" to hold the actual translations
-        # and "Metadata" to store some extra data not needed for translation,
-        # but might be useful upon parsing.
         ws: Worksheet = wb.create_sheet(f"Translations ({context.language})", index=0)
-        wm: Worksheet = wb.create_sheet("Metadata", index=1)
 
-        # Remove all gridlines right away
+        # Remove all gridlines
         ws.sheet_view.showGridLines = False
-        wm.sheet_view.showGridLines = False
 
         # Generate the main spreadsheet for translations
         data = self.get_tabledata(

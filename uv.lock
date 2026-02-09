@@ -327,15 +327,15 @@ wheels = [
 ]
 
 [[package]]
-name = "pox"
-version = "0.1"
+name = "pox-convert"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "openpyxl" },
     { name = "polib" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "django", version = "5.2.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "django", version = "6.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -347,15 +347,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "django", marker = "extra == 'dev'", specifier = ">=4.1.7" },
-    { name = "ipdb", marker = "extra == 'dev'", specifier = ">=0.13.11" },
     { name = "openpyxl", specifier = ">=3.1.1" },
     { name = "polib", specifier = ">=1.2.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.2.2" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15.0" },
 ]
-provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "django", specifier = ">=4.1.7" },
+    { name = "ipdb", specifier = ">=0.13.11" },
+    { name = "pytest", specifier = ">=7.2.2" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "ruff", specifier = ">=0.15.0" },
+]
 
 [[package]]
 name = "prompt-toolkit"

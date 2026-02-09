@@ -141,27 +141,21 @@ def test_not_enough_rows_fails(tmp_path: Path) -> None:
         converter.run()
 
 
-def test_no_language_property_uses_filename(tmp_path: Path) -> None:
+def test_no_language_property_uses_filename(
+    tmp_path: Path, no_language_xlsx: Path
+) -> None:
     """Missing Language property falls back to filename extraction."""
-    xlsx_path = tmp_path / "translations_fr.xlsx"
-    wb = Workbook()
-    ws = wb.worksheets[0]
-    ws.title = "Translations"
-    ws.append(["id", "Context", "Singular Form", "Translation"])
-    ws.append([1, None, "Hello", "Bonjour"])
-    wb.save(str(xlsx_path))
-    wb.close()
-
     opts = argparse.Namespace(
-        xlsx_file=[str(xlsx_path)],
+        xlsx_file=[str(no_language_xlsx)],
         outdir=tmp_path,
         filename="{lang}.po",
     )
     converter = Excel2PoConverter(options=opts)
     converter.run()
 
-    result_po = polib.pofile(str(tmp_path / "fr.po"))
-    assert result_po.metadata["Language"] == "fr"
+    # Filename is test_en.xlsx, so language extracted from stem is "en"
+    result_po = polib.pofile(str(tmp_path / "en.po"))
+    assert result_po.metadata["Language"] == "en"
 
 
 def test_empty_rows_skipped(tmp_path: Path) -> None:
