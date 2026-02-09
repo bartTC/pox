@@ -1,6 +1,6 @@
 [project]
 name = "pox-convert"
-version = "1.0.0"
+version = "1.0.1"
 description = "Convert PO files to Excel Spreadsheets and back."
 authors = [
     {name = "Martin Mahner", email = "martin@elephant.house"},
