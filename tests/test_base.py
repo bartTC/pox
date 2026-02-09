@@ -15,7 +15,7 @@ def test_fail_raises_converter_error() -> None:
         converter.fail("something went wrong")
 
 
-def test_fail_writes_to_stderr(capsys: pytest.pytest.CaptureFixture[str]) -> None:
+def test_fail_writes_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
     """Calling fail() writes the message to stderr."""
     converter = BaseConverter()
     with pytest.raises(ConverterError):
