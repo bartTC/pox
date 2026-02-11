@@ -3,7 +3,7 @@
 import pytest
 
 from pox.base import ArgumentFormatter, BaseConverter, ConverterError
-from pox.plurals import get_plural_hints
+from pox.plurals import _format_values, get_plural_hints
 from pox.utils import box_message, dedent, remove_control_characters
 from pox.warnings import ConversionErrorDescription as D
 
@@ -107,8 +107,6 @@ def test_plural_hints_unparseable_formula_falls_back() -> None:
 
 def test_format_values_empty() -> None:
     """Empty values list returns empty string."""
-    from pox.plurals import _format_values
-
     assert _format_values([], has_more=False) == ""
 
 

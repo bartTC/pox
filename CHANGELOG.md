@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - Programmatic plural hint generation using a safe formula parser.
 - Improved CI coverage reporting.
