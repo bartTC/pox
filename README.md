@@ -3,6 +3,8 @@
 [![PyPI](https://img.shields.io/pypi/v/pox-convert)](https://pypi.org/project/pox-convert/)
 [![Python](https://img.shields.io/pypi/pyversions/pox-convert)](https://pypi.org/project/pox-convert/)
 [![License](https://img.shields.io/pypi/l/pox-convert)](https://github.com/bartTC/pox/blob/main/LICENSE)
+[![Tests](https://github.com/bartTC/pox/actions/workflows/tests.yml/badge.svg)](https://github.com/bartTC/pox/actions/workflows/tests.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bartTC/dfcb5e7cd6cb674ffff8e86f45fb621f/raw/coverage.json)](https://github.com/bartTC/pox/actions/workflows/tests.yml)
 
 Convert `.po` (gettext) files to Excel spreadsheets and back. Supports fuzzy entries and multiple plural forms.
 
