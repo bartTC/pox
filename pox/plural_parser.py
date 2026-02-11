@@ -171,7 +171,6 @@ class Parser:
                 raise ValueError(msg)
             return self.variables[value]
         self.error()
-        return None
 
     def term(self) -> bool | int:
         """Parse multiplication, division, modulo, and power operations."""

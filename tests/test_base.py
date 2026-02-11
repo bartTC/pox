@@ -99,6 +99,19 @@ def test_plural_hints_invalid() -> None:
     assert get_plural_hints("garbage") == {0: "Singular", 1: "Plural"}
 
 
+def test_plural_hints_unparseable_formula_falls_back() -> None:
+    """Plural form with nplurals but broken formula falls back to numbered forms."""
+    result = get_plural_hints("nplurals=3; plural=@@@;")
+    assert result == {0: "Plural Form 1", 1: "Plural Form 2", 2: "Plural Form 3"}
+
+
+def test_format_values_empty() -> None:
+    """Empty values list returns empty string."""
+    from pox.plurals import _format_values
+
+    assert _format_values([], has_more=False) == ""
+
+
 def test_box_message_single_line() -> None:
     """Single-line input produces inline box format."""
     result = box_message("hello")

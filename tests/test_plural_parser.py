@@ -150,3 +150,15 @@ def test_group() -> None:
         {"group": 1, "values": [2], "has_more": False},
         {"group": 2, "values": [0, 3, 4, 5, 6], "has_more": True},
     ]
+
+
+def test_eat_wrong_token_type_raises() -> None:
+    """Calling eat() with a mismatched token type raises ValueError."""
+    with pytest.raises(ValueError, match="Invalid syntax"):
+        parse("(1")
+
+
+def test_factor_unexpected_token_raises() -> None:
+    """An unexpected token in factor position raises ValueError."""
+    with pytest.raises(ValueError, match="Invalid syntax"):
+        parse("+")
