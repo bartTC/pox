@@ -46,6 +46,4 @@ jobs:
           filename: coverage.json
           label: coverage
           message: ${{ steps.coverage.outputs.total }}%
-          valColorRange: ${{ steps.coverage.outputs.total }}
-          minColorRange: 50
-          maxColorRange: 90
+          color: brightgreen
