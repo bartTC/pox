@@ -87,7 +87,9 @@ warn_redundant_casts = true
 warn_unused_configs = true
 
 [tool.coverage.run]
+source = ["pox"]
 omit = [
+    "pox/cli/main.py",
     "pox/cli/pox_convert.py",
     "pox/contrib/*",
 ]

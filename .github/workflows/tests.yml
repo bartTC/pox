@@ -28,7 +28,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Test
-        run: uv run pytest --cov=pox --cov-report=term-missing --cov-report=json
+        run: uv run pytest --cov --cov-report=term-missing --cov-report=json
 
       - name: Extract coverage percentage
         if: github.ref == 'refs/heads/main' && matrix.python-version == '3.14'
