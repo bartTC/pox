@@ -6,15 +6,38 @@ than singular and plural). In a spreadsheet, those forms are separated into mult
 rows and have the plural hint next to it, to indicate which plural form the editor
 should translate.
 
-OPTIMIZE: Those indications can likely be programmatically generated, however it likely
-would require executing arbitrary code from a po file.
+Those indications are programmatically generated using a safe plural formula parser.
 
 See https://www.gnu.org/software/gettext/manual/html_node/Plural-forms.html
 """
 
 import re
 
+from pox.plural_parser import group
+
 RE_PLURAL_COUNT = re.compile(r"nplurals=(?P<num>\d+);")
+
+MAX_RANGE_PARTS = 2
+
+
+def _format_values(values: list[int], has_more: bool) -> str:
+    """Collapse consecutive integers into range notation: [1,2,3,5] → '1-3, 5'."""
+    if not values:
+        return ""
+    parts: list[str] = []
+    start = prev = values[0]
+    for v in values[1:]:
+        if v == prev + 1:
+            prev = v
+        else:
+            parts.append(str(start) if start == prev else f"{start}-{prev}")
+            start = prev = v
+    parts.append(str(start) if start == prev else f"{start}-{prev}")
+    truncated = len(parts) > MAX_RANGE_PARTS or has_more
+    result = ", ".join(parts[:MAX_RANGE_PARTS])
+    if truncated:
+        result += ", ..."
+    return result
 
 
 def get_plural_hints(plural_form: str | None) -> dict[int, str] | None:
@@ -41,7 +64,15 @@ def get_plural_hints(plural_form: str | None) -> dict[int, str] | None:
     if not match:
         return default_form
 
-    # For now, generate a list of Plural forms.
-    # @TODO: Generate a better list in the format "n = 0, 1, 2 ..."
-    num = int(match.groupdict()["num"])
-    return {i: f"Plural Form {i + 1}" for i in range(num)}
+    try:
+        hints = {}
+        for g in group(plural_form, per_group=1000):
+            formatted = _format_values(g["values"], g["has_more"])
+            is_singular = 1 in g["values"]
+            label = "Singular" if is_singular else "Plural"
+            hints[g["group"]] = f"{label}, n = {formatted}"
+    except (ValueError, TypeError, KeyError):
+        num = int(match.groupdict()["num"])
+        return {i: f"Plural Form {i + 1}" for i in range(num)}
+    else:
+        return hints

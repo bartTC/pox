@@ -1,17 +1,68 @@
+#
 msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: ar\n"
-"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : "
+"n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
 
-msgid "Hello"
-msgstr "مرحبا"
+# --- Singular-only strings ---
 
-msgid "%d item"
-msgid_plural "%d items"
-msgstr[0] "لا عناصر"
-msgstr[1] "عنصر واحد"
-msgstr[2] "عنصران"
-msgstr[3] "%d عناصر"
-msgstr[4] "%d عنصرا"
-msgstr[5] "%d عنصر"
+msgid "Spreadsheet"
+msgstr "جدول بيانات"
+
+msgid "Convert PO file to spreadsheet"
+msgstr "تحويل ملف PO إلى جدول بيانات"
+
+# --- Plural strings demonstrating all 6 Arabic forms ---
+# Form 0: Zero (n = 0)
+# Form 1: Singular (n = 1)
+# Form 2: Dual (n = 2)
+# Form 3: Few (n = 3–10, 103–110, ...)
+# Form 4: Many (n = 11–99, 111–199, ...)
+# Form 5: Other (n = 100–102, 200–202, ...)
+
+msgid "%d translation"
+msgid_plural "%d translations"
+msgstr[0] "لا ترجمات"
+msgstr[1] "ترجمة واحدة"
+msgstr[2] "ترجمتان"
+msgstr[3] "%d ترجمات"
+msgstr[4] "%d ترجمةً"
+msgstr[5] "%d ترجمة"
+
+msgid "%d message"
+msgid_plural "%d messages"
+msgstr[0] "لا رسائل"
+msgstr[1] "رسالة واحدة"
+msgstr[2] "رسالتان"
+msgstr[3] "%d رسائل"
+msgstr[4] "%d رسالةً"
+msgstr[5] "%d رسالة"
+
+msgid "%d plural form"
+msgid_plural "%d plural forms"
+msgstr[0] "لا صيغ جمع"
+msgstr[1] "صيغة جمع واحدة"
+msgstr[2] "صيغتا جمع"
+msgstr[3] "%d صيغ جمع"
+msgstr[4] "%d صيغة جمع"
+msgstr[5] "%d صيغة جمع"
+
+msgid "%d column"
+msgid_plural "%d columns"
+msgstr[0] "لا أعمدة"
+msgstr[1] "عمود واحد"
+msgstr[2] "عمودان"
+msgstr[3] "%d أعمدة"
+msgstr[4] "%d عمودًا"
+msgstr[5] "%d عمود"
+
+msgid "%d warning"
+msgid_plural "%d warnings"
+msgstr[0] "لا تحذيرات"
+msgstr[1] "تحذير واحد"
+msgstr[2] "تحذيران"
+msgstr[3] "%d تحذيرات"
+msgstr[4] "%d تحذيرًا"
+msgstr[5] "%d تحذير"

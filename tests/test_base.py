@@ -57,18 +57,41 @@ def test_plural_hints_none() -> None:
 
 
 def test_plural_hints_two_forms() -> None:
-    """Standard two-form plural expression returns two hints."""
+    """Standard two-form plural expression returns two hints with examples."""
     result = get_plural_hints("nplurals=2; plural=(n != 1);")
-    assert len(result) == 2
+    assert result == {
+        0: "Singular, n = 1",
+        1: "Plural, n = 0, 2-999",
+    }
 
 
 def test_plural_hints_three_forms() -> None:
-    """Three-form plural expression returns three hints."""
+    """Three-form plural expression returns three hints with ranges."""
     result = get_plural_hints(
         "nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : "
         "n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);",
     )
-    assert len(result) == 3
+    assert result == {
+        0: "Singular, n = 1, 21, ...",
+        1: "Plural, n = 2-4, 22-24, ...",
+        2: "Plural, n = 0, 5-20, ...",
+    }
+
+
+def test_plural_hints_arabic_six_forms() -> None:
+    """Arabic six-form plural expression returns six hints with ranges."""
+    result = get_plural_hints(
+        "nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : "
+        "n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);"
+    )
+    assert result == {
+        0: "Plural, n = 0",
+        1: "Singular, n = 1",
+        2: "Plural, n = 2",
+        3: "Plural, n = 3-10, 103-110, ...",
+        4: "Plural, n = 11-99, 111-199, ...",
+        5: "Plural, n = 100-102, 200-202, ...",
+    }
 
 
 def test_plural_hints_invalid() -> None:

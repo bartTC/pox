@@ -1,0 +1,85 @@
+# Demo PO file: English > Polish
+# Demonstrates plurals, fuzzy/obsolete entries, context, and blank translations.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: pox-demo\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-11 12:00+0000\n"
+"PO-Revision-Date: 2026-02-11 12:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: pl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && "
+"(n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+# --- Regular translations ---
+
+msgid "Welcome"
+msgstr "Witamy"
+
+msgid "Log in"
+msgstr "Zaloguj się"
+
+msgctxt "menu"
+msgid "Settings"
+msgstr "Ustawienia"
+
+msgctxt "page title"
+msgid "Settings"
+msgstr "Ustawienia konta"
+
+# --- Plurals (3 Polish forms: singular, few, many) ---
+
+msgid "%d file uploaded"
+msgid_plural "%d files uploaded"
+msgstr[0] "%d plik przesłany"
+msgstr[1] "%d pliki przesłane"
+msgstr[2] "%d plików przesłanych"
+
+msgid "%d error found"
+msgid_plural "%d errors found"
+msgstr[0] "%d błąd znaleziony"
+msgstr[1] "%d błędy znalezione"
+msgstr[2] "%d błędów znalezionych"
+
+# --- Blank translations (to be filled in) ---
+
+msgid "Dashboard"
+msgstr ""
+
+msgid "Export completed successfully."
+msgstr ""
+
+msgid "%d row imported"
+msgid_plural "%d rows imported"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+# --- Fuzzy (needs review) ---
+
+#, fuzzy
+msgid "Save changes"
+msgstr "Zapisz"
+
+#, fuzzy
+msgid "%d item selected"
+msgid_plural "%d items selected"
+msgstr[0] "%d element zaznaczony"
+msgstr[1] "%d elementy zaznaczone"
+msgstr[2] "%d elementów zaznaczonych"
+
+# --- Obsolete (removed from source, kept for reference) ---
+
+#~ msgid "Goodbye"
+#~ msgstr "Do widzenia"
+
+#~ msgid "%d message"
+#~ msgid_plural "%d messages"
+#~ msgstr[0] "%d wiadomość"
+#~ msgstr[1] "%d wiadomości"
+#~ msgstr[2] "%d wiadomości"

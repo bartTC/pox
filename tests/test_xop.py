@@ -164,7 +164,7 @@ def test_empty_rows_skipped(tmp_path: Path) -> None:
     wb = Workbook()
     ws = wb.worksheets[0]
     ws.title = "Translations (de)"
-    ws.append(["id", "Context", "Singular Form", "Translation"])
+    ws.append(["id", "Context", "Source Language", "Translation"])
     ws.append([1, None, "Hello", "Hallo"])
     ws.append([None, None, None, None])  # empty row
     ws.append(["", None, None, None])  # blank id row

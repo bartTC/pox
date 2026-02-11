@@ -32,7 +32,7 @@ def test_header_row(singular_xlsx: Path) -> None:
     header = [c.value for c in ws[1]]
     assert "id" in header
     assert "Context" in header
-    assert "Singular Form" in header
+    assert "Source Language" in header
     assert any("Translation" in str(h) for h in header)
     wb.close()
 

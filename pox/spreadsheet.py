@@ -137,7 +137,7 @@ class SpreadsheetGenerator:
         header = [
             ("id", S.HEADER),
             ("Context", S.HEADER),
-            ("Singular Form", S.HEADER),
+            ("Source Language", S.HEADER),
             (base_translation_label, S.HEADER),
         ]
 
