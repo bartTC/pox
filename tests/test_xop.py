@@ -474,20 +474,34 @@ def test_numeric_plural_cell_imports_as_text(tmp_path: Path) -> None:
     assert po[0].msgstr_plural == {0: "", 1: "7"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Bug: text starting with '=' is written as an Excel formula, so it "
-    "imports as empty and adds a second header entry.",
+@pytest.mark.parametrize(
+    ("msgid", "msgstr"),
+    [
+        pytest.param("=== Section ===", "=== Abschnitt ===", id="equals-signs"),
+        pytest.param('=HYPERLINK("x")', "=SUMME(1;2)", id="formula-like"),
+        pytest.param("=", "=", id="equals-only"),
+    ],
 )
-def test_text_starting_with_equals_survives_roundtrip(tmp_path: Path) -> None:
-    """Source and translation starting with '=' are kept as text."""
-    xlsx_path = _export(
-        tmp_path, 'msgid "=== Section ==="\nmsgstr "=== Abschnitt ==="\n'
+def test_text_starting_with_equals_survives_roundtrip(
+    tmp_path: Path, msgid: str, msgstr: str
+) -> None:
+    """Source and translation starting with '=' are stored and read as text."""
+    po = polib.POFile()
+    po.metadata = {"Language": "de"}
+    po.append(polib.POEntry(msgid=msgid, msgstr=msgstr))
+    po.save(str(tmp_path / "input.po"))
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(tmp_path / "input.po")
     )
-    po = _import(tmp_path, xlsx_path)
-    assert [(e.msgid, e.msgstr) for e in po] == [
-        ("=== Section ===", "=== Abschnitt ===")
-    ]
+
+    wb = load_workbook(str(xlsx_path))
+    cells = wb.worksheets[0][2][2:4]
+    assert [(c.data_type, c.quotePrefix) for c in cells] == [("s", True)] * 2
+    wb.close()
+
+    result = _import(tmp_path, xlsx_path)
+    assert [(e.msgid, e.msgstr) for e in result] == [(msgid, msgstr)]
 
 
 @pytest.mark.xfail(

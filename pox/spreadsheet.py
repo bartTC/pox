@@ -40,6 +40,20 @@ def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
             setattr(cell, attr, value)
 
 
+def keep_formulas_as_text(ws: Worksheet, row_idx: int) -> None:
+    """
+    Store text starting with "=" as text, not as a formula.
+
+    openpyxl writes such strings as formulas, so "=== Section ===" would come
+    back empty on import, and a source string like "=HYPERLINK(...)" would run
+    in the translator's Excel. quotePrefix makes Excel show and keep it as text.
+    """
+    for cell in ws[row_idx]:
+        if isinstance(cell.value, str) and cell.value.startswith("="):
+            cell.data_type = "s"
+            cell.quotePrefix = True
+
+
 def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int) -> None:
     """
     Apply thick black borders around contiguous groups of empty translation cells.
@@ -229,6 +243,7 @@ class SpreadsheetGenerator:
         for row_idx, row in enumerate(data, start=1):
             ws.append([cell[0] for cell in row])
             apply_styles(ws, row_idx, row)
+            keep_formulas_as_text(ws, row_idx)
 
         # Freeze the header row
         ws.freeze_panes = "A2"

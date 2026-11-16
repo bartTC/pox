@@ -18,6 +18,9 @@
   nothing.
 - Fixed import crashing when a translation cell holds a number, such as a
   "42" that Excel converted on entry.
+- Fixed text starting with `=` being exported as an Excel formula. It was lost
+  on import, and a source string like `=HYPERLINK(...)` would run as a formula
+  when the spreadsheet was opened.
 
 ## 1.1.0
 
