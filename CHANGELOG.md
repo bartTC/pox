@@ -21,6 +21,9 @@
 - Fixed text starting with `=` being exported as an Excel formula. It was lost
   on import, and a source string like `=HYPERLINK(...)` would run as a formula
   when the spreadsheet was opened.
+- Fixed obsolete entries losing their context, and entries with the context
+  `obsolete` being imported as obsolete. The real context and obsolete flag
+  are now stored in hidden columns; the visible Context column is unchanged.
 
 ## 1.1.0
 

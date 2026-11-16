@@ -6,6 +6,7 @@ from typing import Any
 from openpyxl.packaging.custom import StringProperty
 from openpyxl.styles import PatternFill
 from openpyxl.styles.fills import FILL_SOLID
+from openpyxl.utils import get_column_letter
 from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -26,6 +27,15 @@ from .styles import (
 # entries. The visible source cell shows both forms, but splitting that text
 # back apart is ambiguous when the msgid itself contains newlines.
 SOURCE_SINGULAR_HEADER = "Source Language (singular)"
+
+# Headers of hidden columns holding each entry's exact context and obsolete
+# flag. The visible Context column shows "obsolete" for obsolete entries, which
+# alone can't be told apart from a real context named "obsolete".
+CONTEXT_HEADER = "Context (original)"
+OBSOLETE_HEADER = "Obsolete"
+OBSOLETE_MARKER = "obsolete"
+
+METADATA_HEADERS = (SOURCE_SINGULAR_HEADER, CONTEXT_HEADER, OBSOLETE_HEADER)
 
 
 def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
@@ -164,9 +174,15 @@ class SpreadsheetGenerator:
                 hint = plural_hints.get(i, f"Plural Form {i + 1}")
                 header.append((f"Translation ({hint})", S.HEADER))
             header.append((SOURCE_SINGULAR_HEADER, S.HEADER))
+        header.append((CONTEXT_HEADER, S.HEADER))
+        header.append((OBSOLETE_HEADER, S.HEADER))
 
         data = []
         for i, m in enumerate(messages):
+            metadata = [
+                (m.context, S.MSG_ID),
+                (OBSOLETE_MARKER if m.obsolete else "", S.MSG_ID),
+            ]
             msg_str_style = S.MSG_ID
             if m.obsolete:
                 msg_str_style = S.MSG_STR_OBSOLETE
@@ -185,7 +201,7 @@ class SpreadsheetGenerator:
                 source = f"{m.translation.msgid}\n{m.translation.msgid_plural}"
                 row = [
                     (i + 1, S.ID),
-                    ("obsolete" if m.obsolete else m.context, S.CONTEXT),
+                    (OBSOLETE_MARKER if m.obsolete else m.context, S.CONTEXT),
                     (source, S.MSG_ID),
                     (msgstr_dict.get(0, ""), msg_str_style),
                 ]
@@ -194,18 +210,20 @@ class SpreadsheetGenerator:
                     for pi in range(1, num_plurals)
                 )
                 row.append((m.translation.msgid, S.MSG_ID))
+                row.extend(metadata)
 
                 data.append(row)
             else:
                 data.append(
                     [
                         (i + 1, S.ID),
-                        ("obsolete" if m.obsolete else m.context, S.CONTEXT),
+                        (OBSOLETE_MARKER if m.obsolete else m.context, S.CONTEXT),
                         (m.translation.msgid, S.MSG_ID),
                         (m.translation.msgstr, msg_str_style),
                     ]
                     + [("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols
-                    + ([("", S.MSG_ID)] if has_plurals else []),
+                    + ([("", S.MSG_ID)] if has_plurals else [])
+                    + metadata,
                 )
 
         return [
@@ -254,9 +272,13 @@ class SpreadsheetGenerator:
         ws.column_dimensions["C"].width = 55  # Singular Form
         ws.column_dimensions["D"].width = 55  # Translation
         # Extra plural columns
-        for i in range(4, ws.max_column):
-            col_letter = chr(ord("A") + i)
-            ws.column_dimensions[col_letter].width = 55
+        for i in range(5, ws.max_column + 1):
+            ws.column_dimensions[get_column_letter(i)].width = 55
+
+        # Hide the columns that only exist for the import
+        for cell in ws[1]:
+            if cell.value in METADATA_HEADERS:
+                ws.column_dimensions[cell.column_letter].hidden = True
 
         # Apply alternating row stripes (data starts at row 2)
         if ws.max_row > 1:
@@ -269,7 +291,6 @@ class SpreadsheetGenerator:
         has_plurals = num_plurals >= 2 and any(m.is_plural for m in context.messages)
         if has_plurals:
             num_translation_cols = num_plurals
-            ws.column_dimensions[chr(ord("A") + ws.max_column - 1)].hidden = True
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
 
         # Write out the Excel spreadsheet and return its generated filename.

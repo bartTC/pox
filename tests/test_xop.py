@@ -435,9 +435,6 @@ def test_several_spreadsheets_in_one_run(tmp_path: Path) -> None:
     assert polib.pofile(str(tmp_path / "pl.po")).metadata["Language"] == "pl"
 
 
-# --- Known bugs, kept as strict xfails until they are fixed ---
-
-
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
@@ -504,11 +501,6 @@ def test_text_starting_with_equals_survives_roundtrip(
     assert [(e.msgid, e.msgstr) for e in result] == [(msgid, msgstr)]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Bug: obsolete entries are exported with 'obsolete' in place of "
-    "their context, so the context is lost.",
-)
 def test_obsolete_entry_keeps_context(tmp_path: Path) -> None:
     """An obsolete entry's msgctxt survives the roundtrip."""
     xlsx_path = _export(
@@ -519,17 +511,15 @@ def test_obsolete_entry_keeps_context(tmp_path: Path) -> None:
     assert po[0].msgctxt == "verb"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Bug: a live entry whose context is literally 'obsolete' is "
-    "imported as an obsolete entry without context.",
-)
 def test_context_named_obsolete_is_not_an_obsolete_entry(tmp_path: Path) -> None:
     """The context value 'obsolete' doesn't mark an entry as obsolete."""
     xlsx_path = _export(tmp_path, 'msgctxt "obsolete"\nmsgid "Old"\nmsgstr "Alt"\n')
     po = _import(tmp_path, xlsx_path)
     assert not po[0].obsolete
     assert po[0].msgctxt == "obsolete"
+
+
+# --- Known bugs, kept as strict xfails until they are fixed ---
 
 
 @pytest.mark.xfail(
@@ -551,3 +541,29 @@ def test_plural_forms_header_survives_roundtrip(tmp_path: Path) -> None:
     Excel2PoConverter(options=opts).run()
     result = polib.pofile(str(tmp_path / "pl.po"))
     assert result.metadata.get("Plural-Forms") == source.metadata["Plural-Forms"]
+
+
+def test_short_row_is_padded(tmp_path: Path) -> None:
+    """A hand-edited row shorter than the header imports with empty values."""
+    xlsx_path = tmp_path / "short.xlsx"
+    wb = Workbook()
+    ws = wb.worksheets[0]
+    ws.title = "Translations (de)"
+    ws.append(["id", "Context", "Source Language", "Translation"])
+    ws.append([1, None, "Hello"])
+    wb.custom_doc_props.append(StringProperty(name="Language", value="de"))
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    po = _import(tmp_path, xlsx_path)
+    assert [(e.msgid, e.msgstr) for e in po] == [("Hello", "")]
+
+
+def test_metadata_columns_are_hidden(tmp_path: Path) -> None:
+    """The columns only the import needs are hidden from translators."""
+    xlsx_path = _export(tmp_path, MIXED_UNTRANSLATED_PO)
+    wb = load_workbook(str(xlsx_path))
+    ws = wb.worksheets[0]
+    hidden = [c.value for c in ws[1] if ws.column_dimensions[c.column_letter].hidden]
+    assert hidden == ["Source Language (singular)", "Context (original)", "Obsolete"]
+    wb.close()

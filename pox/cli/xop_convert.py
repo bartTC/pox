@@ -2,13 +2,19 @@
 
 import argparse
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 import polib
 from openpyxl import load_workbook
 
 from pox.base import ArgumentFormatter, BaseConverter
-from pox.spreadsheet import SOURCE_SINGULAR_HEADER
+from pox.spreadsheet import (
+    CONTEXT_HEADER,
+    OBSOLETE_HEADER,
+    OBSOLETE_MARKER,
+    SOURCE_SINGULAR_HEADER,
+)
 from pox.styles import NOT_APPLICABLE_PATTERN, YELLOW
 from pox.utils import dedent
 
@@ -61,6 +67,75 @@ def split_plural_source(source: str, singular: str | None) -> tuple[str, str]:
     return singular, source.removeprefix(f"{singular}\n")
 
 
+@dataclass(frozen=True)
+class SheetLayout:
+    """Where each kind of value lives in a translations sheet."""
+
+    # Columns: id, Context, Source Language, Translation, [extra plural cols...]
+    num_translation_cols: int
+    # Exports before this column existed only carry the plural msgid
+    singular_col: int | None
+    # Older exports only have the visible Context column, where "obsolete"
+    # replaces the context of obsolete entries.
+    context_col: int | None
+    obsolete_col: int | None
+    width: int
+
+    @classmethod
+    def from_header(cls, header: list) -> "SheetLayout":
+        """Find the columns by their header names."""
+
+        def find(name: str) -> int | None:
+            return header.index(name) if name in header else None
+
+        return cls(
+            num_translation_cols=sum(
+                1 for h in header[3:] if h and str(h).startswith("Translation")
+            ),
+            singular_col=find(SOURCE_SINGULAR_HEADER),
+            context_col=find(CONTEXT_HEADER),
+            obsolete_col=find(OBSOLETE_HEADER),
+            width=len(header),
+        )
+
+
+def row_to_entry(cells: tuple, layout: SheetLayout) -> polib.POEntry | None:
+    """Build a PO entry from a sheet row, or return None for a blank row."""
+    row = [cell_text(c.value) for c in cells]
+    # Hand-edited sheets can have rows shorter than the header
+    row += [""] * (layout.width - len(row))
+    if not row[0]:
+        return None
+
+    if layout.context_col is not None and layout.obsolete_col is not None:
+        context = row[layout.context_col] or None
+        obsolete = bool(row[layout.obsolete_col])
+    else:
+        obsolete = row[1] == OBSOLETE_MARKER
+        context = None if obsolete else row[1] or None
+    msgid = row[2]
+
+    n = layout.num_translation_cols
+    if n > 1 and not is_singular_row(cells, n, legacy=layout.singular_col is None):
+        singular = row[layout.singular_col] if layout.singular_col is not None else None
+        msgid, msgid_plural = split_plural_source(msgid, singular)
+        entry = polib.POEntry(
+            msgid=msgid,
+            msgid_plural=msgid_plural,
+            msgctxt=context,
+            obsolete=obsolete,
+        )
+        entry.msgstr_plural = {pi: row[3 + pi] for pi in range(n)}
+        return entry
+
+    return polib.POEntry(
+        msgid=msgid,
+        msgstr=row[3],
+        msgctxt=context,
+        obsolete=obsolete,
+    )
+
+
 class Excel2PoConverter(BaseConverter):
     """Convert Excel spreadsheets back to PO files."""
 
@@ -78,7 +153,7 @@ class Excel2PoConverter(BaseConverter):
         for xlsx_path in self.options.xlsx_file:
             self.convert_xlsx(Path(xlsx_path))
 
-    def convert_xlsx(self, path: Path) -> None:  # noqa: C901
+    def convert_xlsx(self, path: Path) -> None:
         """Parse an xlsx file and write a corresponding PO file."""
         wb = load_workbook(str(path), read_only=True, data_only=True)
 
@@ -113,64 +188,11 @@ class Excel2PoConverter(BaseConverter):
         if len(rows) < 2:
             self.fail(f'Not enough rows in "{path}".')
 
-        # Row 0 = header, rows 1+ = data
-        header_row = [c.value for c in rows[0]]
-
-        # Determine number of translation columns
-        # Columns: id, Context, Singular Form, Translation, [extra plural cols...]
-        num_translation_cols = sum(
-            1 for h in header_row[3:] if h and str(h).startswith("Translation")
-        )
-
-        # Exports before this column existed only carry the plural msgid
-        singular_col = (
-            header_row.index(SOURCE_SINGULAR_HEADER)
-            if SOURCE_SINGULAR_HEADER in header_row
-            else None
-        )
-
-        data_rows = rows[1:]  # Skip header
-
-        for cells in data_rows:
-            row = [cell_text(c.value) for c in cells]
-            if not row or not row[0]:
-                continue
-
-            context = row[1] if row[1] and row[1] != "obsolete" else None
-            obsolete = row[1] == "obsolete"
-            msgid = row[2]
-
-            if num_translation_cols > 1 and not is_singular_row(
-                cells, num_translation_cols, legacy=singular_col is None
-            ):
-                # Plural entry
-                msgstr_plural = {}
-                for pi in range(num_translation_cols):
-                    col_idx = 3 + pi
-                    val = row[col_idx] if col_idx < len(row) else ""
-                    msgstr_plural[pi] = val or ""
-
-                singular = row[singular_col] if singular_col is not None else None
-                msgid, msgid_plural = split_plural_source(msgid, singular)
-
-                entry = polib.POEntry(
-                    msgid=msgid,
-                    msgid_plural=msgid_plural,
-                    msgctxt=context,
-                    obsolete=obsolete,
-                )
-                entry.msgstr_plural = msgstr_plural
-            else:
-                # Singular entry
-                msgstr = row[3] or "" if len(row) > 3 else ""
-                entry = polib.POEntry(
-                    msgid=msgid,
-                    msgstr=msgstr,
-                    msgctxt=context,
-                    obsolete=obsolete,
-                )
-
-            po.append(entry)
+        layout = SheetLayout.from_header([c.value for c in rows[0]])
+        for cells in rows[1:]:  # Skip header
+            entry = row_to_entry(cells, layout)
+            if entry is not None:
+                po.append(entry)
 
         wb.close()
 
