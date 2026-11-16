@@ -35,6 +35,18 @@ def is_singular_row(cells: tuple, num_translation_cols: int, *, legacy: bool) ->
     )
 
 
+def cell_text(value: object) -> str:
+    """
+    Return a cell value as the text the translator typed.
+
+    Excel stores input like "42" or "3.5" as a number, but PO entries need
+    strings.
+    """
+    if value is None:
+        return ""
+    return str(value)
+
+
 def split_plural_source(source: str, singular: str | None) -> tuple[str, str]:
     r"""
     Return (msgid, msgid_plural) for a plural row.
@@ -120,13 +132,13 @@ class Excel2PoConverter(BaseConverter):
         data_rows = rows[1:]  # Skip header
 
         for cells in data_rows:
-            row = [c.value for c in cells]
-            if not row or row[0] is None or row[0] == "":
+            row = [cell_text(c.value) for c in cells]
+            if not row or not row[0]:
                 continue
 
             context = row[1] if row[1] and row[1] != "obsolete" else None
             obsolete = row[1] == "obsolete"
-            msgid = row[2] or ""
+            msgid = row[2]
 
             if num_translation_cols > 1 and not is_singular_row(
                 cells, num_translation_cols, legacy=singular_col is None

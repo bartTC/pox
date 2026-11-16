@@ -438,22 +438,40 @@ def test_several_spreadsheets_in_one_run(tmp_path: Path) -> None:
 # --- Known bugs, kept as strict xfails until they are fixed ---
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AttributeError,
-    reason="Bug: a number in a translation cell (Excel converts typed '42') "
-    "crashes the import because polib expects a string.",
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        pytest.param(42, "42", id="int"),
+        pytest.param(3.5, "3.5", id="float"),
+        pytest.param(42.0, "42", id="whole-float"),
+    ],
 )
-def test_numeric_translation_cell_imports_as_text(tmp_path: Path) -> None:
+def test_numeric_translation_cell_imports_as_text(
+    tmp_path: Path, value: float, expected: str
+) -> None:
     """A translation Excel stored as a number is imported as its text."""
     xlsx_path = _export(tmp_path, 'msgid "Answer"\nmsgstr ""\n')
     wb = load_workbook(str(xlsx_path))
-    wb.worksheets[0].cell(row=2, column=4).value = 42
+    wb.worksheets[0].cell(row=2, column=4).value = value
     wb.save(str(xlsx_path))
     wb.close()
 
     po = _import(tmp_path, xlsx_path)
-    assert po.find("Answer").msgstr == "42"
+    assert po.find("Answer").msgstr == expected
+
+
+def test_numeric_plural_cell_imports_as_text(tmp_path: Path) -> None:
+    """A plural form Excel stored as a number is imported as its text."""
+    xlsx_path = _export(
+        tmp_path, 'msgid "%d"\nmsgid_plural "%d"\nmsgstr[0] ""\nmsgstr[1] ""\n'
+    )
+    wb = load_workbook(str(xlsx_path))
+    wb.worksheets[0].cell(row=2, column=5).value = 7
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    po = _import(tmp_path, xlsx_path)
+    assert po[0].msgstr_plural == {0: "", 1: "7"}
 
 
 @pytest.mark.xfail(

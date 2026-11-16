@@ -16,6 +16,8 @@
 - `export` warns about each path or pattern that matches no files, and exits
   with status 1 if no `.po` files are found at all. Previously it silently did
   nothing.
+- Fixed import crashing when a translation cell holds a number, such as a
+  "42" that Excel converted on entry.
 
 ## 1.1.0
 
