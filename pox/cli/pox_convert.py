@@ -23,6 +23,38 @@ from pox.warnings import ConversionError as E
 from pox.warnings import ConversionErrorDescription as D
 
 
+def collect_messages(pofile: polib.POFile, *, skip_fuzzy: bool) -> list[Message]:
+    """Restructure polib entries into the Message structure the spreadsheet uses."""
+    messages: list[Message] = []
+    for item in pofile:
+        if skip_fuzzy and "fuzzy" in item.flags:
+            continue
+
+        # This item has multiple pluralization forms
+        if item.msgstr_plural:
+            t: PluralTranslation | SingularTranslation = PluralTranslation(
+                msgid=item.msgid,
+                msgid_plural=item.msgid_plural,
+                msgstr=item.msgstr_plural,
+            )
+        else:
+            t = SingularTranslation(
+                msgid=item.msgid,
+                msgstr=item.msgstr,
+            )
+
+        messages.append(
+            Message(
+                translation=t,
+                context=item.msgctxt,
+                comment=item.comment,
+                tcomment=item.tcomment,
+                obsolete=item.obsolete == 1,
+            ),
+        )
+    return messages
+
+
 class Po2ExcelConverter(BaseConverter):
     """Convert PO files to Excel spreadsheets."""
 
@@ -98,46 +130,13 @@ class Po2ExcelConverter(BaseConverter):
             self.warning_descriptions.append(D.MISSING_LANGUAGE)
             return
 
-        # Restructure all polib entries to a defined Message structure
-        # we use to convert to a spreadsheet and back.
-        messages: list[Message] = []
-        item: polib.POEntry
-
-        fuzzy_entries = pofile.fuzzy_entries()
-
-        if self.options.fuzzy == "stop" and fuzzy_entries:
+        if self.options.fuzzy == "stop" and (fuzzy_entries := pofile.fuzzy_entries()):
             self.fail(
                 f'Found {len(fuzzy_entries)} fuzzy entries in "{path}". '
                 "Remove them or use --fuzzy=ignore/include.",
             )
 
-        for item in iter(pofile):
-            # Handle fuzzy entries
-            if "fuzzy" in item.flags and self.options.fuzzy == "ignore":
-                continue
-
-            # This item has multiple pluralization forms
-            if item.msgstr_plural:
-                t = PluralTranslation(
-                    msgid=item.msgid,
-                    msgid_plural=item.msgid_plural,
-                    msgstr=item.msgstr_plural,
-                )
-            else:
-                t = SingularTranslation(
-                    msgid=item.msgid,
-                    msgstr=item.msgstr,
-                )
-
-            m = Message(
-                translation=t,
-                context=item.msgctxt,
-                comment=item.comment,
-                tcomment=item.tcomment,
-                obsolete=item.obsolete == 1,
-            )
-
-            messages.append(m)
+        messages = collect_messages(pofile, skip_fuzzy=self.options.fuzzy == "ignore")
 
         # Build out a context item with all necessary data to create
         # a spreadsheet.
@@ -155,7 +154,7 @@ class Po2ExcelConverter(BaseConverter):
         self.ok(f"Created {filename}")
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover - standalone CLI, see pox.cli.main
     """Run the PO-to-Excel CLI command."""
     parser = argparse.ArgumentParser(
         prog="pox-convert",

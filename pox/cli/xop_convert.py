@@ -169,7 +169,7 @@ class Excel2PoConverter(BaseConverter):
         self.ok(f"Created {out_path}")
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover - standalone CLI, see pox.cli.main
     """Run the Excel-to-PO CLI command."""
     parser = argparse.ArgumentParser(
         prog="xop-convert",

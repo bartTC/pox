@@ -6,12 +6,8 @@ from pathlib import Path
 import polib
 import pytest
 
-from pox.datastructures import (
-    Message,
-    PluralTranslation,
-    SingularTranslation,
-    SpreadsheetContext,
-)
+from pox.cli.pox_convert import collect_messages
+from pox.datastructures import SpreadsheetContext
 from pox.plurals import get_plural_hints
 from pox.spreadsheet import SpreadsheetGenerator
 
@@ -49,32 +45,9 @@ def no_language_po() -> Path:
 
 
 def build_context(po_path: Path) -> SpreadsheetContext:
-    """Build a SpreadsheetContext from a PO file, mimicking pox_convert logic."""
+    """Build a SpreadsheetContext from a PO file using the converter's own parsing."""
     pofile = polib.pofile(str(po_path))
-    messages = []
-
-    for item in pofile:
-        if item.msgstr_plural:
-            t = PluralTranslation(
-                msgid=item.msgid,
-                msgid_plural=item.msgid_plural,
-                msgstr=item.msgstr_plural,
-            )
-        else:
-            t = SingularTranslation(
-                msgid=item.msgid,
-                msgstr=item.msgstr,
-            )
-
-        messages.append(
-            Message(
-                translation=t,
-                context=item.msgctxt,
-                comment=item.comment,
-                tcomment=item.tcomment,
-                obsolete=item.obsolete == 1,
-            ),
-        )
+    messages = collect_messages(pofile, skip_fuzzy=False)
 
     return SpreadsheetContext(
         created=datetime.now(tz=UTC),
@@ -119,3 +92,15 @@ def plurals_xlsx(tmp_path: Path, plurals_po: Path) -> Path:
 def no_language_xlsx(tmp_path: Path, no_language_po: Path) -> Path:
     """Generate an xlsx from the no-language PO fixture."""
     return _generate_xlsx(tmp_path, no_language_po)
+
+
+def entry_key(e: polib.POEntry) -> tuple:
+    """Return everything about a PO entry that a roundtrip must preserve."""
+    return (
+        e.msgctxt,
+        e.msgid,
+        e.msgid_plural,
+        e.msgstr,
+        dict(e.msgstr_plural),
+        bool(e.obsolete),
+    )

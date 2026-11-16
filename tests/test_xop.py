@@ -12,7 +12,7 @@ from pox.base import ConverterError
 from pox.cli.xop_convert import Excel2PoConverter
 from pox.spreadsheet import SpreadsheetGenerator
 
-from .conftest import FIXTURES, build_context
+from .conftest import FIXTURES, build_context, entry_key
 
 
 def test_singular_roundtrip(tmp_path: Path, singular_xlsx: Path) -> None:
@@ -309,17 +309,6 @@ def test_edited_plural_source_kept_as_plural(tmp_path: Path) -> None:
     assert entries["%d file"].msgid_plural == "%d documents"
 
 
-def _entry_key(e: polib.POEntry) -> tuple:
-    return (
-        e.msgctxt,
-        e.msgid,
-        e.msgid_plural,
-        e.msgstr,
-        dict(e.msgstr_plural),
-        bool(e.obsolete),
-    )
-
-
 def test_full_roundtrip_preserves_every_entry(tmp_path: Path) -> None:
     """Every entry type survives PO -> Excel -> PO unchanged."""
     source = polib.pofile(str(FIXTURES / "entry_types.po"))
@@ -328,7 +317,7 @@ def test_full_roundtrip_preserves_every_entry(tmp_path: Path) -> None:
         filename="test_{lang}.xlsx", context=build_context(FIXTURES / "entry_types.po")
     )
     result = _import(tmp_path, xlsx_path)
-    assert [_entry_key(e) for e in result] == [_entry_key(e) for e in source]
+    assert [entry_key(e) for e in result] == [entry_key(e) for e in source]
 
 
 # Exported with pox-convert 1.1.0 from fixtures/entry_types.po: no hatching on
@@ -383,3 +372,150 @@ def test_hatched_cell_with_text_stays_singular(tmp_path: Path) -> None:
     entries = {e.msgid: e for e in po}
     assert entries["Hello"].msgstr == "Hallo"
     assert not entries["Hello"].msgid_plural
+
+
+@pytest.mark.parametrize(
+    ("msgid", "msgstr"),
+    [
+        pytest.param("  padded  ", "  gepolstert  ", id="surrounding-spaces"),
+        pytest.param("Tab\there", "Tab\thier", id="tab"),
+        pytest.param("Line\n", "Zeile\n", id="trailing-newline"),
+        pytest.param("One\nTwo", "Eins\nZwei", id="inner-newline"),
+        pytest.param(
+            '<b>Fish & Chips</b> 100% "quoted"',
+            '<b>Fisch & Pommes</b> 100% "zitiert"',
+            id="markup-and-quotes",
+        ),
+        pytest.param("%(count)s items", "%(count)s Dinge", id="format-placeholder"),
+        pytest.param("Party 🎉", "Feier 🎉", id="emoji"),
+        pytest.param("Hello", "שלום", id="rtl"),
+        pytest.param("+49 phone", "-minus", id="leading-plus-minus"),
+        pytest.param("x" * 5000, "y" * 5000, id="long-text"),
+    ],
+)
+def test_text_survives_roundtrip(tmp_path: Path, msgid: str, msgstr: str) -> None:
+    """Translations come back from the spreadsheet exactly as they went in."""
+    po = polib.POFile()
+    po.metadata = {"Language": "de"}
+    po.append(polib.POEntry(msgid=msgid, msgstr=msgstr))
+    po.save(str(tmp_path / "input.po"))
+
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(tmp_path / "input.po")
+    )
+    result = _import(tmp_path, xlsx_path)
+    assert [(e.msgid, e.msgstr) for e in result] == [(msgid, msgstr)]
+
+
+def test_header_only_sheet_fails_cleanly(tmp_path: Path) -> None:
+    """A sheet with a header but no entries fails with an error, not a traceback."""
+    xlsx_path = tmp_path / "header_only.xlsx"
+    wb = Workbook()
+    ws = wb.worksheets[0]
+    ws.title = "Translations (de)"
+    ws.append(["id", "Context", "Source Language", "Translation"])
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    with pytest.raises(ConverterError, match="Not enough rows"):
+        _import(tmp_path, xlsx_path)
+
+
+def test_several_spreadsheets_in_one_run(tmp_path: Path) -> None:
+    """Each spreadsheet given to the import produces its own PO file."""
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    paths = [
+        str(gen.generate(filename="t_{lang}.xlsx", context=build_context(FIXTURES / f)))
+        for f in ("singular.po", "plurals_polish.po")
+    ]
+    opts = argparse.Namespace(xlsx_file=paths, outdir=tmp_path, filename="{lang}.po")
+    Excel2PoConverter(options=opts).run()
+    assert polib.pofile(str(tmp_path / "de.po")).find("Hello").msgstr == "Hallo"
+    assert polib.pofile(str(tmp_path / "pl.po")).metadata["Language"] == "pl"
+
+
+# --- Known bugs, kept as strict xfails until they are fixed ---
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AttributeError,
+    reason="Bug: a number in a translation cell (Excel converts typed '42') "
+    "crashes the import because polib expects a string.",
+)
+def test_numeric_translation_cell_imports_as_text(tmp_path: Path) -> None:
+    """A translation Excel stored as a number is imported as its text."""
+    xlsx_path = _export(tmp_path, 'msgid "Answer"\nmsgstr ""\n')
+    wb = load_workbook(str(xlsx_path))
+    wb.worksheets[0].cell(row=2, column=4).value = 42
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    po = _import(tmp_path, xlsx_path)
+    assert po.find("Answer").msgstr == "42"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Bug: text starting with '=' is written as an Excel formula, so it "
+    "imports as empty and adds a second header entry.",
+)
+def test_text_starting_with_equals_survives_roundtrip(tmp_path: Path) -> None:
+    """Source and translation starting with '=' are kept as text."""
+    xlsx_path = _export(
+        tmp_path, 'msgid "=== Section ==="\nmsgstr "=== Abschnitt ==="\n'
+    )
+    po = _import(tmp_path, xlsx_path)
+    assert [(e.msgid, e.msgstr) for e in po] == [
+        ("=== Section ===", "=== Abschnitt ===")
+    ]
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Bug: obsolete entries are exported with 'obsolete' in place of "
+    "their context, so the context is lost.",
+)
+def test_obsolete_entry_keeps_context(tmp_path: Path) -> None:
+    """An obsolete entry's msgctxt survives the roundtrip."""
+    xlsx_path = _export(
+        tmp_path, '#~ msgctxt "verb"\n#~ msgid "Run"\n#~ msgstr "Laufen"\n'
+    )
+    po = _import(tmp_path, xlsx_path)
+    assert po[0].obsolete
+    assert po[0].msgctxt == "verb"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Bug: a live entry whose context is literally 'obsolete' is "
+    "imported as an obsolete entry without context.",
+)
+def test_context_named_obsolete_is_not_an_obsolete_entry(tmp_path: Path) -> None:
+    """The context value 'obsolete' doesn't mark an entry as obsolete."""
+    xlsx_path = _export(tmp_path, 'msgctxt "obsolete"\nmsgid "Old"\nmsgstr "Alt"\n')
+    po = _import(tmp_path, xlsx_path)
+    assert not po[0].obsolete
+    assert po[0].msgctxt == "obsolete"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="Bug: the import doesn't restore Plural-Forms, so msgfmt --check "
+    "fails and gettext falls back to the two-form rule.",
+)
+def test_plural_forms_header_survives_roundtrip(tmp_path: Path) -> None:
+    """The Plural-Forms header comes back from the spreadsheet."""
+    source = polib.pofile(str(FIXTURES / "plurals_polish.po"))
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx",
+        context=build_context(FIXTURES / "plurals_polish.po"),
+    )
+    opts = argparse.Namespace(
+        xlsx_file=[str(xlsx_path)], outdir=tmp_path, filename="{lang}.po"
+    )
+    Excel2PoConverter(options=opts).run()
+    result = polib.pofile(str(tmp_path / "pl.po"))
+    assert result.metadata.get("Plural-Forms") == source.metadata["Plural-Forms"]

@@ -98,15 +98,13 @@ warn_unused_configs = true
 
 [tool.coverage.run]
 source = ["pox"]
+branch = true
 omit = [
-    "pox/cli/main.py",
-    "pox/cli/pox_convert.py",
     "pox/contrib/*",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
     "if __name__",
-    "def main",
     "pragma: no cover",
 ]

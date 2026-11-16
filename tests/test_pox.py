@@ -124,14 +124,14 @@ def test_plural_columns(plurals_xlsx: Path) -> None:
 
 
 def test_plural_entry_values(plurals_xlsx: Path) -> None:
-    """Plural translation values are written correctly."""
+    """Plural rows show both source forms and every translated form."""
     wb = load_workbook(str(plurals_xlsx))
     ws = wb.worksheets[0]
-    for row in ws.iter_rows(values_only=True):
-        if row[2] == "%d items":
-            assert row[3] == "%d Gegenstand"
-            assert row[4] == "%d Gegenstaende"
-            break
+    rows = [r[2:5] for r in ws.iter_rows(min_row=2, values_only=True)]
+    assert rows == [
+        ("%d item\n%d items", "%d Gegenstand", "%d Gegenstaende"),
+        ("Hello", "Hallo", None),
+    ]
     wb.close()
 
 
@@ -150,23 +150,8 @@ def test_obsolete_entry(tmp_path: Path, obsolete_po: Path) -> None:
     result = gen.generate(filename="test_{lang}.xlsx", context=context)
     wb = load_workbook(str(result))
     ws = wb.worksheets[0]
-    for row in ws.iter_rows(values_only=True):
-        if row[2] == "Old":
-            assert row[1] == "obsolete"
-            break
-    wb.close()
-
-
-def test_fuzzy_entry_included(tmp_path: Path, fuzzy_po: Path) -> None:
-    """Fuzzy entries are included when build_context doesn't filter them."""
-    context = build_context(fuzzy_po)
-    gen = SpreadsheetGenerator(outdir=tmp_path)
-    result = gen.generate(filename="test_{lang}.xlsx", context=context)
-    wb = load_workbook(str(result))
-    ws = wb.worksheets[0]
-    msgids = [r[2] for r in ws.iter_rows(values_only=True) if r[0]]
-    # build_context includes all entries (no fuzzy filtering)
-    assert "Maybe" in msgids
+    rows = [r[1:4] for r in ws.iter_rows(min_row=2, values_only=True)]
+    assert rows == [(None, "Hello", "Hallo"), ("obsolete", "Old", "Alt")]
     wb.close()
 
 
