@@ -38,6 +38,10 @@ OBSOLETE_MARKER = "obsolete"
 # Excel's "Text" number format
 TEXT_FORMAT = "@"
 
+# Hidden sheet holding the PO file's header fields. Custom document
+# properties would be simpler, but Excel limits their values to 255 characters.
+PO_HEADER_SHEET = "PO Header"
+
 METADATA_HEADERS = (SOURCE_SINGULAR_HEADER, CONTEXT_HEADER, OBSOLETE_HEADER)
 
 
@@ -124,6 +128,16 @@ def format_as_text(ws: Worksheet, first_col: int, num_cols: int) -> None:
     ):
         for cell in row:
             cell.number_format = TEXT_FORMAT
+
+
+def add_po_header_sheet(wb: Workbook, metadata: dict[str, str]) -> None:
+    """Store the PO header fields in a hidden sheet for the import."""
+    ws = wb.create_sheet(PO_HEADER_SHEET)
+    ws.sheet_state = "hidden"
+    ws.append(["Field", "Value"])
+    for row_idx, (key, value) in enumerate(metadata.items(), start=2):
+        ws.append([key, value])
+        keep_formulas_as_text(ws, row_idx)
 
 
 def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int) -> None:
@@ -257,8 +271,6 @@ class SpreadsheetGenerator:
             StringProperty(name="Language", value=context.language),
             StringProperty(name="PoxConvert", value=__version__),
         ]
-        if context.plural_forms:
-            props.append(StringProperty(name="PluralForms", value=context.plural_forms))
 
         for p in props:
             wb.custom_doc_props.append(p)
@@ -313,6 +325,8 @@ class SpreadsheetGenerator:
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
 
         format_as_text(ws, first_col=4, num_cols=num_translation_cols)
+
+        add_po_header_sheet(wb, context.metadata)
 
         # Write out the Excel spreadsheet and return its generated filename.
         path = self.output_path(filename, context)

@@ -148,7 +148,7 @@ class Po2ExcelConverter(BaseConverter):
             messages=messages,
             language=language,
             plural_form_hints=get_plural_hints(pofile.metadata.get("Plural-Forms")),
-            plural_forms=pofile.metadata.get("Plural-Forms"),
+            metadata=dict(pofile.metadata),
         )
 
         # Convert to a spreadsheet.

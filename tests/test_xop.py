@@ -575,7 +575,50 @@ def test_po_without_plural_forms_gains_none(tmp_path: Path) -> None:
     assert "Plural-Forms" not in po.metadata
 
 
-def test_legacy_sheet_has_no_plural_forms(tmp_path: Path) -> None:
-    """Old sheets don't store Plural-Forms, so the import can't add it."""
+def test_legacy_sheet_gets_minimal_header(tmp_path: Path) -> None:
+    """Old sheets don't store the PO header, so only the basics are written."""
     po = _import(tmp_path, LEGACY_XLSX)
-    assert "Plural-Forms" not in po.metadata
+    assert po.metadata == {
+        "Content-Type": "text/plain; charset=UTF-8",
+        "Language": "de",
+    }
+
+
+def test_language_override_wins_over_stored_header(tmp_path: Path) -> None:
+    """An export with --language writes that language into the imported header."""
+    context = build_context(FIXTURES / "singular.po")
+    context.language = "fr"
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(filename="test_{lang}.xlsx", context=context)
+
+    opts = argparse.Namespace(
+        xlsx_file=[str(xlsx_path)], outdir=tmp_path, filename="{lang}.po"
+    )
+    Excel2PoConverter(options=opts).run()
+    po = polib.pofile(str(tmp_path / "fr.po"))
+    assert po.metadata["Language"] == "fr"
+    assert po.metadata["Plural-Forms"] == "nplurals=2; plural=(n != 1);"
+
+
+def test_po_header_sheet_is_hidden(tmp_path: Path) -> None:
+    """The header sheet is hidden, and the translations sheet stays in front."""
+    xlsx_path = _export(tmp_path, MIXED_UNTRANSLATED_PO)
+    wb = load_workbook(str(xlsx_path))
+    assert wb.sheetnames == ["Translations (de)", "PO Header"]
+    assert wb["PO Header"].sheet_state == "hidden"
+    assert wb.active.title == "Translations (de)"
+    wb.close()
+
+
+def test_po_header_value_starting_with_equals(tmp_path: Path) -> None:
+    """A header value starting with '=' is stored as text and comes back."""
+    source = polib.POFile()
+    source.metadata = {"Language": "de", "X-Note": "=keep me"}
+    source.append(polib.POEntry(msgid="Hi", msgstr="Hallo"))
+    source.save(str(tmp_path / "input.po"))
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(tmp_path / "input.po")
+    )
+    po = _import(tmp_path, xlsx_path)
+    assert po.metadata["X-Note"] == "=keep me"

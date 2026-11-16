@@ -6,13 +6,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import polib
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 
 from pox.base import ArgumentFormatter, BaseConverter
 from pox.spreadsheet import (
     CONTEXT_HEADER,
     OBSOLETE_HEADER,
     OBSOLETE_MARKER,
+    PO_HEADER_SHEET,
     SOURCE_SINGULAR_HEADER,
 )
 from pox.styles import NOT_APPLICABLE_PATTERN, YELLOW
@@ -65,6 +66,19 @@ def split_plural_source(source: str, singular: str | None) -> tuple[str, str]:
     if not singular:
         return source, source
     return singular, source.removeprefix(f"{singular}\n")
+
+
+def read_po_header(wb: Workbook) -> dict[str, str]:
+    """
+    Return the PO header fields stored by the export.
+
+    Older exports don't have the sheet; the import then writes only
+    Content-Type and Language.
+    """
+    if PO_HEADER_SHEET not in wb.sheetnames:
+        return {}
+    rows = wb[PO_HEADER_SHEET].iter_rows(min_row=2, values_only=True)
+    return {cell_text(key): cell_text(value) for key, value, *_ in rows if key}
 
 
 @dataclass(frozen=True)
@@ -177,13 +191,10 @@ class Excel2PoConverter(BaseConverter):
 
         # Parse rows into polib entries
         po = polib.POFile()
-        po.metadata = {
+        po.metadata = read_po_header(wb) or {
             "Content-Type": "text/plain; charset=UTF-8",
-            "Language": language,
         }
-        # Older exports don't store it; gettext then uses its default rule
-        if plural_forms := props.get("PluralForms"):
-            po.metadata["Plural-Forms"] = plural_forms
+        po.metadata["Language"] = language
 
         rows = list(ws.iter_rows())
         if len(rows) < 2:

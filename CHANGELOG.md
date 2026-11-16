@@ -33,6 +33,9 @@
 - Translation cells are formatted as Text, so Excel keeps what translators
   type as typed instead of turning `1/2` into a date, `42` into a number, or
   `=...` into a formula.
+- The import restores every PO header field (`Project-Id-Version`,
+  `Last-Translator`, and so on), stored in a hidden "PO Header" sheet.
+  Previously only `Content-Type` and `Language` were written.
 
 ## 1.1.0
 

@@ -32,6 +32,22 @@ def test_export_then_import_roundtrip(
     source = polib.pofile(str(tmp_path / "django.po"))
     result = polib.pofile(str(tmp_path / "de_back.po"))
     assert [entry_key(e) for e in result] == [entry_key(e) for e in source]
+    assert result.metadata == source.metadata
+
+
+def test_full_po_header_survives_cli_roundtrip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every header field of a real-world PO file comes back unchanged."""
+    monkeypatch.chdir(tmp_path)
+    shutil.copy(FIXTURES / "demo.po", tmp_path / "django.po")
+
+    _run(monkeypatch, "export", "--fuzzy", "include", "django.po")
+    _run(monkeypatch, "import", "translations_pl.xlsx", "-f", "{lang}_back.po")
+
+    source = polib.pofile(str(tmp_path / "django.po"))
+    result = polib.pofile(str(tmp_path / "pl_back.po"))
+    assert list(result.metadata.items()) == list(source.metadata.items())
 
 
 def test_export_fuzzy_stop_exits_cleanly(

@@ -1,6 +1,6 @@
 """Data structures for pox translations."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from functools import cached_property
 
@@ -46,5 +46,5 @@ class SpreadsheetContext:
     messages: list[Message]
     created: datetime
     plural_form_hints: dict[int, str] | None
-    # The raw Plural-Forms header, stored so the import can restore it
-    plural_forms: str | None = None
+    # The PO file's header fields, stored so the import can restore them
+    metadata: dict[str, str] = field(default_factory=dict)
