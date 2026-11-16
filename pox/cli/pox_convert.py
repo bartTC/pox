@@ -2,10 +2,10 @@
 
 import argparse
 import asyncio
+import glob
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import ClassVar
 
 import polib
 
@@ -27,20 +27,24 @@ class Po2ExcelConverter(BaseConverter):
     """Convert PO files to Excel spreadsheets."""
 
     options: argparse.Namespace
-    po_files: ClassVar[list[Path]] = []
-    warning_descriptions: ClassVar[list[D]] = []
+    po_files: list[Path]
+    warning_descriptions: list[D]
 
     def __init__(self, options: argparse.Namespace) -> None:
         """Create a new converter instance and run preflight checks."""
         self.options = options
+        self.po_files = []
+        self.warning_descriptions = []
 
         # Make sure, the output directory exists and is a directory
         if options.outdir and (not options.outdir.is_dir()):
             self.fail(E.OUTPUT_DIR_DOES_NOT_EXIST.value.format(outdir=options.outdir))
 
         # Glob and gather all given po files and check for their existence.
+        # glob.glob, unlike Path.glob, accepts absolute patterns too.
         for po_glob in options.po_file:
-            for p in Path().glob(po_glob):
+            for match in sorted(glob.glob(po_glob, recursive=True)):  # noqa: PTH207
+                p = Path(match)
                 if p.is_dir():
                     self.warning(message=E.FILE_IS_FOLDER.value.format(p=p))
                     continue

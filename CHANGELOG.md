@@ -11,6 +11,8 @@
   import restores both. Previously the singular `msgid` was lost on import.
   Spreadsheets from older versions only contain the plural form, which is
   still used for both.
+- `export` now accepts absolute paths and glob patterns. Previously they
+  failed with `NotImplementedError: Non-relative patterns are unsupported`.
 
 ## 1.1.0
 
