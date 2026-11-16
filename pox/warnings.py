@@ -13,6 +13,8 @@ class ConversionError(enum.Enum):
     )
     FILE_UNREADABLE = 'The po file "{p}" is unreadable.'
     FILE_IS_FOLDER = 'The po file "{p}" is a folder. Only set .po files.'
+    NO_MATCH = 'No files match "{p}".'
+    NO_PO_FILES = "No po files found."
     OUTPUT_DIR_DOES_NOT_EXIST = 'The  output directory "{outdir}" does not exist '
     NO_LANGUAGE = 'The po file "{p}" has no "Language" set in it\'s metadata.'
 

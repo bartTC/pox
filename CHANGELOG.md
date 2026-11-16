@@ -13,6 +13,9 @@
   still used for both.
 - `export` now accepts absolute paths and glob patterns. Previously they
   failed with `NotImplementedError: Non-relative patterns are unsupported`.
+- `export` warns about each path or pattern that matches no files, and exits
+  with status 1 if no `.po` files are found at all. Previously it silently did
+  nothing.
 
 ## 1.1.0
 

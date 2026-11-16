@@ -43,12 +43,18 @@ class Po2ExcelConverter(BaseConverter):
         # Glob and gather all given po files and check for their existence.
         # glob.glob, unlike Path.glob, accepts absolute patterns too.
         for po_glob in options.po_file:
-            for match in sorted(glob.glob(po_glob, recursive=True)):  # noqa: PTH207
+            matches = sorted(glob.glob(po_glob, recursive=True))  # noqa: PTH207
+            if not matches:
+                self.warning(message=E.NO_MATCH.value.format(p=po_glob))
+            for match in matches:
                 p = Path(match)
                 if p.is_dir():
                     self.warning(message=E.FILE_IS_FOLDER.value.format(p=p))
                     continue
                 self.po_files.append(p.resolve())
+
+        if not self.po_files:
+            self.fail(E.NO_PO_FILES)
 
         # The language can only be used for a single po file, otherwise
         # we'd overwrite them all with the same language.

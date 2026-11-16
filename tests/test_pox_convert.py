@@ -3,10 +3,13 @@
 import argparse
 import asyncio
 import shutil
+import sys
 from pathlib import Path
 
 import pytest
 
+from pox.base import ConverterError
+from pox.cli.main import main
 from pox.cli.pox_convert import Po2ExcelConverter
 
 from .conftest import FIXTURES
@@ -73,9 +76,10 @@ def test_directory_is_skipped(
     tmp_path: Path, locales: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """A directory matching the pattern is skipped with a warning."""
-    conv = _converter(tmp_path, str(locales / "de"))
-    assert conv.po_files == []
-    assert "folder" in capsys.readouterr().err.lower()
+    po_path = locales / "pl" / "django.po"
+    conv = _converter(tmp_path, str(locales / "de"), str(po_path))
+    assert conv.po_files == [po_path.resolve()]
+    assert "is a folder" in capsys.readouterr().err
 
 
 def test_instances_do_not_share_files(tmp_path: Path, locales: Path) -> None:
@@ -83,3 +87,36 @@ def test_instances_do_not_share_files(tmp_path: Path, locales: Path) -> None:
     _converter(tmp_path, str(locales / "de" / "django.po"))
     conv = _converter(tmp_path, str(locales / "pl" / "django.po"))
     assert conv.po_files == [(locales / "pl" / "django.po").resolve()]
+
+
+def test_unmatched_pattern_warns(
+    tmp_path: Path, locales: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A pattern matching nothing warns, and the other files are still used."""
+    po_path = locales / "de" / "django.po"
+    conv = _converter(tmp_path, str(tmp_path / "missing.po"), str(po_path))
+    assert conv.po_files == [po_path.resolve()]
+    assert f'No files match "{tmp_path / "missing.po"}"' in capsys.readouterr().err
+
+
+def test_no_files_found_fails(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """If nothing matches at all, the converter fails instead of doing nothing."""
+    with pytest.raises(ConverterError):
+        _converter(tmp_path, str(tmp_path / "missing.po"))
+    assert "No po files found." in capsys.readouterr().err
+
+
+def test_cli_exits_nonzero_when_no_files_found(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The export command exits with status 1 when no PO files are found."""
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["pox-convert", "export", "-o", str(tmp_path), str(tmp_path / "missing.po")],
+    )
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 1
