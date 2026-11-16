@@ -162,7 +162,7 @@ def main() -> None:
         except* ConverterError:
             sys.exit(1)
 
-    elif options.command == "import":
+    else:  # "import", argparse allows no other command
         try:
             convert = Excel2PoConverter(options=options)
             convert.run()

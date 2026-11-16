@@ -187,7 +187,7 @@ class Parser:
                 result //= rhs
             elif token.type == "MOD":
                 result %= rhs
-            elif token.type == "POW":
+            else:  # "POW"
                 result **= rhs
 
         return result
@@ -209,7 +209,7 @@ class Parser:
             if token.type == "ADD":
                 self.eat("ADD")
                 result += self.term()
-            elif token.type == "SUB":
+            else:  # "SUB"
                 self.eat("SUB")
                 result -= self.term()
 
@@ -239,7 +239,7 @@ class Parser:
             next_result = self.parse_expression()
             if token.type == "OP_AND":
                 result = result and next_result
-            elif token.type == "OP_OR":
+            else:  # "OP_OR"
                 return result or next_result
 
         return result
