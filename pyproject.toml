@@ -59,6 +59,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.15.0",
     "ipdb>=0.13.11",
+    "mypy>=2.4.1",
 ]
 
 [tool.ruff]
