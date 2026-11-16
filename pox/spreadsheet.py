@@ -240,6 +240,8 @@ class SpreadsheetGenerator:
             StringProperty(name="Language", value=context.language),
             StringProperty(name="PoxConvert", value=__version__),
         ]
+        if context.plural_forms:
+            props.append(StringProperty(name="PluralForms", value=context.plural_forms))
 
         for p in props:
             wb.custom_doc_props.append(p)

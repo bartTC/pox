@@ -54,6 +54,7 @@ def build_context(po_path: Path) -> SpreadsheetContext:
         messages=messages,
         language=pofile.metadata.get("Language", "en"),
         plural_form_hints=get_plural_hints(pofile.metadata.get("Plural-Forms")),
+        plural_forms=pofile.metadata.get("Plural-Forms"),
     )
 
 

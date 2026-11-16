@@ -24,6 +24,9 @@
 - Fixed obsolete entries losing their context, and entries with the context
   `obsolete` being imported as obsolete. The real context and obsolete flag
   are now stored in hidden columns; the visible Context column is unchanged.
+- Fixed import dropping the `Plural-Forms` header, which made `msgfmt --check`
+  fail and gettext fall back to its two-form rule. Spreadsheets from older
+  versions don't contain it, so files imported from them still lack it.
 
 ## 1.1.0
 

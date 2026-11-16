@@ -46,3 +46,5 @@ class SpreadsheetContext:
     messages: list[Message]
     created: datetime
     plural_form_hints: dict[int, str] | None
+    # The raw Plural-Forms header, stored so the import can restore it
+    plural_forms: str | None = None

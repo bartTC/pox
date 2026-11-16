@@ -519,14 +519,6 @@ def test_context_named_obsolete_is_not_an_obsolete_entry(tmp_path: Path) -> None
     assert po[0].msgctxt == "obsolete"
 
 
-# --- Known bugs, kept as strict xfails until they are fixed ---
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="Bug: the import doesn't restore Plural-Forms, so msgfmt --check "
-    "fails and gettext falls back to the two-form rule.",
-)
 def test_plural_forms_header_survives_roundtrip(tmp_path: Path) -> None:
     """The Plural-Forms header comes back from the spreadsheet."""
     source = polib.pofile(str(FIXTURES / "plurals_polish.po"))
@@ -567,3 +559,23 @@ def test_metadata_columns_are_hidden(tmp_path: Path) -> None:
     hidden = [c.value for c in ws[1] if ws.column_dimensions[c.column_letter].hidden]
     assert hidden == ["Source Language (singular)", "Context (original)", "Obsolete"]
     wb.close()
+
+
+def test_po_without_plural_forms_gains_none(tmp_path: Path) -> None:
+    """A PO file without Plural-Forms doesn't gain one through the roundtrip."""
+    source = polib.POFile()
+    source.metadata = {"Language": "de"}
+    source.append(polib.POEntry(msgid="Hi", msgstr="Hallo"))
+    source.save(str(tmp_path / "input.po"))
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(tmp_path / "input.po")
+    )
+    po = _import(tmp_path, xlsx_path)
+    assert "Plural-Forms" not in po.metadata
+
+
+def test_legacy_sheet_has_no_plural_forms(tmp_path: Path) -> None:
+    """Old sheets don't store Plural-Forms, so the import can't add it."""
+    po = _import(tmp_path, LEGACY_XLSX)
+    assert "Plural-Forms" not in po.metadata

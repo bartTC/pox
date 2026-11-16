@@ -158,10 +158,8 @@ class Excel2PoConverter(BaseConverter):
         wb = load_workbook(str(path), read_only=True, data_only=True)
 
         # Read custom properties for metadata
-        language = None
-        for prop in wb.custom_doc_props:
-            if prop.name == "Language":
-                language = prop.value
+        props = {prop.name: prop.value for prop in wb.custom_doc_props}
+        language = props.get("Language")
 
         if not language:
             self.warning(f'No "Language" property found in "{path}". Using filename.')
@@ -183,6 +181,9 @@ class Excel2PoConverter(BaseConverter):
             "Content-Type": "text/plain; charset=UTF-8",
             "Language": language,
         }
+        # Older exports don't store it; gettext then uses its default rule
+        if plural_forms := props.get("PluralForms"):
+            po.metadata["Plural-Forms"] = plural_forms
 
         rows = list(ws.iter_rows())
         if len(rows) < 2:
