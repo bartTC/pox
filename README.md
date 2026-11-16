@@ -61,6 +61,7 @@ The generated Excel file has the following structure:
 - The header row is frozen for easy scrolling
 - Alternating row stripes improve readability
 - Plural forms get additional translation columns
+- Plural columns that don't apply to a singular message are hatched gray
 - Language metadata is stored as a custom document property
 
 ## Django integration

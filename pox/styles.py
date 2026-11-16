@@ -18,6 +18,10 @@ RED_BG = "FFCC0000"
 OBSOLETE_GRAY = "FFBFBFBF"
 ROW_STRIPE = "FFF9F9F9"
 
+# Diagonal hatching marks plural columns that don't apply to a singular
+# message. The import reads this pattern back to tell singular rows apart.
+NOT_APPLICABLE_PATTERN = "lightUp"
+
 DEFAULT_ALIGNMENT = Alignment(
     horizontal="left",
     vertical="center",
@@ -99,6 +103,16 @@ class SpreadsheetStyles(Enum):
 
     MSG_STR_EMPTY = {  # noqa: RUF012
         "fill": PatternFill(fill_type=FILL_SOLID, fgColor=YELLOW),
+        "font": Font(name=FONT_FAMILY, size=FONT_SIZE, color=BLACK),
+        "alignment": DEFAULT_ALIGNMENT,
+    }
+
+    MSG_STR_NOT_APPLICABLE = {  # noqa: RUF012
+        "fill": PatternFill(
+            fill_type=NOT_APPLICABLE_PATTERN,
+            fgColor=MEDIUM_GRAY,
+            bgColor=WHITE,
+        ),
         "font": Font(name=FONT_FAMILY, size=FONT_SIZE, color=BLACK),
         "alignment": DEFAULT_ALIGNMENT,
     }

@@ -270,3 +270,17 @@ def test_no_language_po_defaults_to_en(tmp_path: Path, no_language_po: Path) -> 
     gen = SpreadsheetGenerator(outdir=tmp_path)
     result = gen.generate(filename="test_{lang}.xlsx", context=context)
     assert result.exists()
+
+
+def test_singular_row_plural_cells_hatched(plurals_xlsx: Path) -> None:
+    """Plural columns of a singular message are hatched as not applicable."""
+    wb = load_workbook(str(plurals_xlsx))
+    ws = wb.worksheets[0]
+    # Row 3 is the singular "Hello" entry, column 5 is the plural form
+    assert ws.cell(row=3, column=3).value == "Hello"
+    cell = ws.cell(row=3, column=5)
+    assert cell.value is None
+    assert cell.fill.fill_type == "lightUp"
+    # The plural entry's own plural cell is not hatched
+    assert ws.cell(row=2, column=5).fill.fill_type != "lightUp"
+    wb.close()

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Plural columns that don't apply to a singular message are now hatched gray,
+  so they no longer look like missing translations.
+- Fixed import turning singular messages into plural entries when the
+  spreadsheet has plural columns.
+
 ## 1.1.0
 
 - Programmatic plural hint generation using a safe formula parser.

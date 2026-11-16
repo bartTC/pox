@@ -8,7 +8,23 @@ import polib
 from openpyxl import load_workbook
 
 from pox.base import ArgumentFormatter, BaseConverter
+from pox.styles import NOT_APPLICABLE_PATTERN
 from pox.utils import dedent
+
+
+def is_singular_row(cells: tuple) -> bool:
+    """
+    Return whether a row in a plural-enabled sheet holds a singular message.
+
+    The export hatches the extra plural columns of singular rows. Any hatched
+    cell is enough, so a translator pasting over one of them doesn't turn the
+    row into a plural entry.
+    """
+    return any(
+        getattr(c, "fill", None) is not None
+        and c.fill.fill_type == NOT_APPLICABLE_PATTERN
+        for c in cells[4:]
+    )
 
 
 class Excel2PoConverter(BaseConverter):
@@ -59,12 +75,12 @@ class Excel2PoConverter(BaseConverter):
             "Language": language,
         }
 
-        rows = list(ws.iter_rows(values_only=True))
+        rows = list(ws.iter_rows())
         if len(rows) < 2:
             self.fail(f'Not enough rows in "{path}".')
 
         # Row 0 = header, rows 1+ = data
-        header_row = rows[0]
+        header_row = [c.value for c in rows[0]]
 
         # Determine number of translation columns
         # Columns: id, Context, Singular Form, Translation, [extra plural cols...]
@@ -74,7 +90,8 @@ class Excel2PoConverter(BaseConverter):
 
         data_rows = rows[1:]  # Skip header
 
-        for row in data_rows:
+        for cells in data_rows:
+            row = [c.value for c in cells]
             if not row or row[0] is None or row[0] == "":
                 continue
 
@@ -82,7 +99,7 @@ class Excel2PoConverter(BaseConverter):
             obsolete = row[1] == "obsolete"
             msgid = row[2] or ""
 
-            if num_translation_cols > 1:
+            if num_translation_cols > 1 and not is_singular_row(cells):
                 # Plural entry
                 msgstr_plural = {}
                 for pi in range(num_translation_cols):

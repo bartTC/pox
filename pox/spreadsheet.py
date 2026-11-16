@@ -29,8 +29,6 @@ def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
         if not isinstance(cell_data, tuple) or len(cell_data) < 2:  # pragma: no cover
             continue
         style = cell_data[1]
-        if style is None:
-            continue
         cell = ws.cell(row=row_idx, column=col_idx)
         style_dict = style.value
         for attr, value in style_dict.items():
@@ -184,7 +182,7 @@ class SpreadsheetGenerator:
                         (m.translation.msgid, S.MSG_ID),
                         (m.translation.msgstr, msg_str_style),
                     ]
-                    + [("", None)] * extra_cols,
+                    + [("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols,
                 )
 
         return [

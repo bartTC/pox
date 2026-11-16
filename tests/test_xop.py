@@ -202,3 +202,47 @@ def test_obsolete_entry_roundtrip(tmp_path: Path, singular_xlsx: Path) -> None:
     # The obsolete marker in context column should not leak as msgctxt
     for entry in result_po:
         assert entry.msgctxt != "obsolete"
+
+
+def test_singular_entry_in_plural_sheet_stays_singular(
+    tmp_path: Path, plurals_xlsx: Path
+) -> None:
+    """A singular message in a sheet with plural columns imports as singular."""
+    opts = argparse.Namespace(
+        xlsx_file=[str(plurals_xlsx)],
+        outdir=tmp_path,
+        filename="{lang}.po",
+    )
+    Excel2PoConverter(options=opts).run()
+
+    result_po = polib.pofile(str(tmp_path / "de.po"))
+    entries = {e.msgid: e for e in result_po}
+    assert entries["Hello"].msgstr == "Hallo"
+    assert not entries["Hello"].msgid_plural
+    assert not entries["Hello"].msgstr_plural
+
+
+def test_untranslated_plural_entry_stays_plural(tmp_path: Path) -> None:
+    """A plural row with all forms empty (and no hatching) imports as plural."""
+    xlsx_path = tmp_path / "untranslated.xlsx"
+    wb = Workbook()
+    ws = wb.worksheets[0]
+    ws.title = "Translations (de)"
+    ws.append(
+        ["id", "Context", "Source Language", "Translation (one)", "Translation (other)"]
+    )
+    ws.append([1, None, "%d items", None, None])
+    wb.custom_doc_props.append(StringProperty(name="Language", value="de"))
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    opts = argparse.Namespace(
+        xlsx_file=[str(xlsx_path)],
+        outdir=tmp_path,
+        filename="{lang}.po",
+    )
+    Excel2PoConverter(options=opts).run()
+
+    result_po = polib.pofile(str(tmp_path / "de.po"))
+    assert result_po[0].msgid_plural
+    assert result_po[0].msgstr_plural == {0: "", 1: ""}
