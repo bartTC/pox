@@ -5,11 +5,14 @@ from pathlib import Path
 
 import polib
 import pytest
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.packaging.custom import StringProperty
 
 from pox.base import ConverterError
 from pox.cli.xop_convert import Excel2PoConverter
+from pox.spreadsheet import SpreadsheetGenerator
+
+from .conftest import FIXTURES, build_context
 
 
 def test_singular_roundtrip(tmp_path: Path, singular_xlsx: Path) -> None:
@@ -222,27 +225,161 @@ def test_singular_entry_in_plural_sheet_stays_singular(
     assert not entries["Hello"].msgstr_plural
 
 
-def test_untranslated_plural_entry_stays_plural(tmp_path: Path) -> None:
-    """A plural row with all forms empty (and no hatching) imports as plural."""
-    xlsx_path = tmp_path / "untranslated.xlsx"
-    wb = Workbook()
-    ws = wb.worksheets[0]
-    ws.title = "Translations (de)"
-    ws.append(
-        ["id", "Context", "Source Language", "Translation (one)", "Translation (other)"]
-    )
-    ws.append([1, None, "%d items", None, None])
-    wb.custom_doc_props.append(StringProperty(name="Language", value="de"))
-    wb.save(str(xlsx_path))
-    wb.close()
-
+def _import(tmp_path: Path, xlsx_path: Path) -> polib.POFile:
     opts = argparse.Namespace(
         xlsx_file=[str(xlsx_path)],
         outdir=tmp_path,
         filename="{lang}.po",
     )
     Excel2PoConverter(options=opts).run()
+    return polib.pofile(str(tmp_path / "de.po"))
 
-    result_po = polib.pofile(str(tmp_path / "de.po"))
-    assert result_po[0].msgid_plural
-    assert result_po[0].msgstr_plural == {0: "", 1: ""}
+
+def _export(tmp_path: Path, po_content: str) -> Path:
+    po_path = tmp_path / "input.po"
+    po_path.write_text(PO_HEADER + po_content)
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    return gen.generate(filename="test_{lang}.xlsx", context=build_context(po_path))
+
+
+PO_HEADER = """msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+"Language: de\\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\\n"
+
+"""
+
+MIXED_UNTRANSLATED_PO = """msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "%d file"
+msgid_plural "%d files"
+msgstr[0] "%d Datei"
+msgstr[1] "%d Dateien"
+
+msgid "Hello"
+msgstr "Hallo"
+
+msgid "Goodbye"
+msgstr ""
+"""
+
+
+def test_untranslated_plural_entry_stays_plural(tmp_path: Path) -> None:
+    """A plural row with every form empty imports as plural."""
+    po = _import(tmp_path, _export(tmp_path, MIXED_UNTRANSLATED_PO))
+    entries = {e.msgid: e for e in po}
+    assert entries["%d item"].msgid_plural == "%d items"
+    assert entries["%d item"].msgstr_plural == {0: "", 1: ""}
+
+
+def test_plural_source_roundtrip(tmp_path: Path) -> None:
+    """Both msgid and msgid_plural of a plural entry survive a roundtrip."""
+    po = _import(tmp_path, _export(tmp_path, MIXED_UNTRANSLATED_PO))
+    entries = {e.msgid: e for e in po}
+    assert entries["%d file"].msgid_plural == "%d files"
+    assert entries["%d file"].msgstr_plural == {0: "%d Datei", 1: "%d Dateien"}
+
+
+def test_multiline_plural_source_roundtrip(tmp_path: Path) -> None:
+    """Plural msgids containing newlines are split back apart exactly."""
+    content = """msgid "One\\nline"
+msgid_plural "Many\\nlines"
+msgstr[0] "Eine\\nZeile"
+msgstr[1] "Viele\\nZeilen"
+"""
+    po = _import(tmp_path, _export(tmp_path, content))
+    assert po[0].msgid == "One\nline"
+    assert po[0].msgid_plural == "Many\nlines"
+
+
+def test_edited_plural_source_kept_as_plural(tmp_path: Path) -> None:
+    """If the visible source cell was edited, it is kept whole as the plural."""
+    xlsx_path = _export(tmp_path, MIXED_UNTRANSLATED_PO)
+    wb = load_workbook(str(xlsx_path))
+    wb.worksheets[0].cell(row=3, column=3).value = "%d documents"
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    po = _import(tmp_path, xlsx_path)
+    entries = {e.msgid: e for e in po}
+    assert entries["%d file"].msgid_plural == "%d documents"
+
+
+def _entry_key(e: polib.POEntry) -> tuple:
+    return (
+        e.msgctxt,
+        e.msgid,
+        e.msgid_plural,
+        e.msgstr,
+        dict(e.msgstr_plural),
+        bool(e.obsolete),
+    )
+
+
+def test_full_roundtrip_preserves_every_entry(tmp_path: Path) -> None:
+    """Every entry type survives PO -> Excel -> PO unchanged."""
+    source = polib.pofile(str(FIXTURES / "entry_types.po"))
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(FIXTURES / "entry_types.po")
+    )
+    result = _import(tmp_path, xlsx_path)
+    assert [_entry_key(e) for e in result] == [_entry_key(e) for e in source]
+
+
+# Exported with pox-convert 1.1.0 from fixtures/entry_types.po: no hatching on
+# singular rows and no hidden singular-msgid column.
+LEGACY_XLSX = FIXTURES / "legacy_v1.1.0.xlsx"
+
+
+def test_legacy_sheet_entry_types(tmp_path: Path) -> None:
+    """Old sheets import singular rows as singular and plural rows as plural."""
+    po = _import(tmp_path, LEGACY_XLSX)
+    plural = {e.msgid for e in po if e.msgid_plural}
+    singular = {e.msgid for e in po if not e.msgid_plural}
+    assert plural == {"%d files", "%d items", "%d folders", "%d olds"}
+    assert singular == {"Hello", "Goodbye", "Open", "Thanks", "Gone"}
+
+
+def test_legacy_sheet_translations(tmp_path: Path) -> None:
+    """Old sheets keep every translation, context, and obsolete flag."""
+    po = _import(tmp_path, LEGACY_XLSX)
+    entries = {e.msgid: e for e in po}
+
+    # Translated, untranslated, and partially translated plurals
+    assert entries["%d files"].msgstr_plural == {0: "%d Datei", 1: "%d Dateien"}
+    assert entries["%d items"].msgstr_plural == {0: "", 1: ""}
+    assert entries["%d folders"].msgstr_plural == {0: "%d Ordner", 1: ""}
+
+    # Old sheets only carry the plural msgid, so it is used for both
+    assert entries["%d files"].msgid_plural == "%d files"
+
+    assert entries["Hello"].msgstr == "Hallo"
+    assert entries["Goodbye"].msgstr == ""
+    assert entries["Open"].msgstr == "Offen"
+    assert entries["Open"].msgctxt == "adjective"
+
+    assert entries["%d olds"].obsolete
+    assert entries["%d olds"].msgstr_plural == {0: "%d alt", 1: "%d alte"}
+    assert entries["Gone"].obsolete
+    assert entries["Gone"].msgstr == "Weg"
+
+
+def test_hatched_cell_with_text_stays_singular(tmp_path: Path) -> None:
+    """Text typed into a hatched cell doesn't turn a singular row into a plural."""
+    xlsx_path = _export(tmp_path, MIXED_UNTRANSLATED_PO)
+    wb = load_workbook(str(xlsx_path))
+    ws = wb.worksheets[0]
+    hello_row = next(r for r in ws.iter_rows(min_row=2) if r[2].value == "Hello")
+    hello_row[4].value = "oops"
+    wb.save(str(xlsx_path))
+    wb.close()
+
+    po = _import(tmp_path, xlsx_path)
+    entries = {e.msgid: e for e in po}
+    assert entries["Hello"].msgstr == "Hallo"
+    assert not entries["Hello"].msgid_plural

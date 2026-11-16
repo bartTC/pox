@@ -22,6 +22,11 @@ from .styles import (
     SpreadsheetStyles as S,
 )
 
+# Header of the hidden column holding the exact singular msgid of plural
+# entries. The visible source cell shows both forms, but splitting that text
+# back apart is ambiguous when the msgid itself contains newlines.
+SOURCE_SINGULAR_HEADER = "Source Language (singular)"
+
 
 def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
     """Apply styles from (value, style) tuples to the cells of the given row."""
@@ -144,6 +149,7 @@ class SpreadsheetGenerator:
             for i in range(1, num_plurals):
                 hint = plural_hints.get(i, f"Plural Form {i + 1}")
                 header.append((f"Translation ({hint})", S.HEADER))
+            header.append((SOURCE_SINGULAR_HEADER, S.HEADER))
 
         data = []
         for i, m in enumerate(messages):
@@ -162,16 +168,18 @@ class SpreadsheetGenerator:
                 if any(v == "" for v in msgstr_dict.values()):
                     msg_str_style = S.MSG_STR_EMPTY
 
+                source = f"{m.translation.msgid}\n{m.translation.msgid_plural}"
                 row = [
                     (i + 1, S.ID),
                     ("obsolete" if m.obsolete else m.context, S.CONTEXT),
-                    (m.translation.msgid, S.MSG_ID),
+                    (source, S.MSG_ID),
                     (msgstr_dict.get(0, ""), msg_str_style),
                 ]
                 row.extend(
                     (msgstr_dict.get(pi, ""), msg_str_style)
                     for pi in range(1, num_plurals)
                 )
+                row.append((m.translation.msgid, S.MSG_ID))
 
                 data.append(row)
             else:
@@ -182,7 +190,8 @@ class SpreadsheetGenerator:
                         (m.translation.msgid, S.MSG_ID),
                         (m.translation.msgstr, msg_str_style),
                     ]
-                    + [("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols,
+                    + [("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols
+                    + ([("", S.MSG_ID)] if has_plurals else []),
                 )
 
         return [
@@ -245,6 +254,7 @@ class SpreadsheetGenerator:
         has_plurals = num_plurals >= 2 and any(m.is_plural for m in context.messages)
         if has_plurals:
             num_translation_cols = num_plurals
+            ws.column_dimensions[chr(ord("A") + ws.max_column - 1)].hidden = True
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
 
         # Write out the Excel spreadsheet and return its generated filename.

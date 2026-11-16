@@ -8,23 +8,45 @@ import polib
 from openpyxl import load_workbook
 
 from pox.base import ArgumentFormatter, BaseConverter
-from pox.styles import NOT_APPLICABLE_PATTERN
+from pox.spreadsheet import SOURCE_SINGULAR_HEADER
+from pox.styles import NOT_APPLICABLE_PATTERN, YELLOW
 from pox.utils import dedent
 
 
-def is_singular_row(cells: tuple) -> bool:
+def is_singular_row(cells: tuple, num_translation_cols: int, *, legacy: bool) -> bool:
     """
     Return whether a row in a plural-enabled sheet holds a singular message.
 
     The export hatches the extra plural columns of singular rows. Any hatched
     cell is enough, so a translator pasting over one of them doesn't turn the
     row into a plural entry.
+
+    Legacy sheets predate the hatching. Their exporter gave plural rows either
+    a value in every plural cell or the yellow "empty" fill, so extra cells that
+    are all blank and not yellow belong to a singular row.
     """
-    return any(
-        getattr(c, "fill", None) is not None
-        and c.fill.fill_type == NOT_APPLICABLE_PATTERN
-        for c in cells[4:]
+    extra = cells[4 : 3 + num_translation_cols]
+    if any(c.fill.fill_type == NOT_APPLICABLE_PATTERN for c in extra):
+        return True
+    if not legacy:
+        return False
+    return all(not c.value for c in extra) and not any(
+        c.fill.fgColor.rgb == YELLOW for c in extra
     )
+
+
+def split_plural_source(source: str, singular: str | None) -> tuple[str, str]:
+    r"""
+    Return (msgid, msgid_plural) for a plural row.
+
+    The source cell shows "singular\nplural" and the hidden column holds the
+    exact singular, so stripping it off yields the plural. If the source cell
+    was edited, it is kept whole as the plural. Legacy sheets have no hidden
+    column and only ever showed the plural msgid, so it is used for both.
+    """
+    if not singular:
+        return source, source
+    return singular, source.removeprefix(f"{singular}\n")
 
 
 class Excel2PoConverter(BaseConverter):
@@ -88,6 +110,13 @@ class Excel2PoConverter(BaseConverter):
             1 for h in header_row[3:] if h and str(h).startswith("Translation")
         )
 
+        # Exports before this column existed only carry the plural msgid
+        singular_col = (
+            header_row.index(SOURCE_SINGULAR_HEADER)
+            if SOURCE_SINGULAR_HEADER in header_row
+            else None
+        )
+
         data_rows = rows[1:]  # Skip header
 
         for cells in data_rows:
@@ -99,7 +128,9 @@ class Excel2PoConverter(BaseConverter):
             obsolete = row[1] == "obsolete"
             msgid = row[2] or ""
 
-            if num_translation_cols > 1 and not is_singular_row(cells):
+            if num_translation_cols > 1 and not is_singular_row(
+                cells, num_translation_cols, legacy=singular_col is None
+            ):
                 # Plural entry
                 msgstr_plural = {}
                 for pi in range(num_translation_cols):
@@ -107,9 +138,12 @@ class Excel2PoConverter(BaseConverter):
                     val = row[col_idx] if col_idx < len(row) else ""
                     msgstr_plural[pi] = val or ""
 
+                singular = row[singular_col] if singular_col is not None else None
+                msgid, msgid_plural = split_plural_source(msgid, singular)
+
                 entry = polib.POEntry(
                     msgid=msgid,
-                    msgid_plural=msgid,
+                    msgid_plural=msgid_plural,
                     msgctxt=context,
                     obsolete=obsolete,
                 )

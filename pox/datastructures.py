@@ -18,6 +18,7 @@ class PluralTranslation:
     """Represent a plural translation entry."""
 
     msgid: str
+    msgid_plural: str
     msgstr: dict[int, str]
 
 

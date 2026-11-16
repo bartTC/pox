@@ -1,0 +1,42 @@
+#
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "%d file"
+msgid_plural "%d files"
+msgstr[0] "%d Datei"
+msgstr[1] "%d Dateien"
+
+msgid "Hello"
+msgstr "Hallo"
+
+msgid "%d item"
+msgid_plural "%d items"
+msgstr[0] ""
+msgstr[1] ""
+
+msgid "Goodbye"
+msgstr ""
+
+msgid "%d folder"
+msgid_plural "%d folders"
+msgstr[0] "%d Ordner"
+msgstr[1] ""
+
+msgctxt "adjective"
+msgid "Open"
+msgstr "Offen"
+
+msgid "Thanks"
+msgstr "Danke"
+
+#~ msgid "%d old"
+#~ msgid_plural "%d olds"
+#~ msgstr[0] "%d alt"
+#~ msgstr[1] "%d alte"
+
+#~ msgid "Gone"
+#~ msgstr "Weg"

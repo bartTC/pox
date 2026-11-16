@@ -56,7 +56,8 @@ def build_context(po_path: Path) -> SpreadsheetContext:
     for item in pofile:
         if item.msgstr_plural:
             t = PluralTranslation(
-                msgid=item.msgid_plural,
+                msgid=item.msgid,
+                msgid_plural=item.msgid_plural,
                 msgstr=item.msgstr_plural,
             )
         else:
