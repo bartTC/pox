@@ -30,6 +30,9 @@
 - Fixed `export` silently overwriting a spreadsheet when several `.po` files
   have the same language, or the filename has no `{lang}`. The first file is
   kept and the others are skipped with a warning.
+- Translation cells are formatted as Text, so Excel keeps what translators
+  type as typed instead of turning `1/2` into a date, `42` into a number, or
+  `=...` into a formula.
 
 ## 1.1.0
 

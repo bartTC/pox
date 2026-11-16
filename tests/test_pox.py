@@ -269,3 +269,19 @@ def test_singular_row_plural_cells_hatched(plurals_xlsx: Path) -> None:
     # The plural entry's own plural cell is not hatched
     assert ws.cell(row=2, column=5).fill.fill_type != "lightUp"
     wb.close()
+
+
+def test_translation_cells_are_formatted_as_text(tmp_path: Path) -> None:
+    """Translation cells use Excel's Text format; other columns don't."""
+    context = build_context(FIXTURES / "plurals_polish.po")
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    result = gen.generate(filename="test_{lang}.xlsx", context=context)
+    wb = load_workbook(str(result))
+    ws = wb.worksheets[0]
+    for row in ws.iter_rows(min_row=2):
+        formats = [c.number_format for c in row]
+        # id, Context, Source, then the 3 Polish forms, then hidden columns
+        assert formats[3:6] == ["@"] * 3
+        assert "@" not in formats[:3] + formats[6:]
+    assert ws[1][3].number_format != "@"  # header row
+    wb.close()

@@ -35,6 +35,9 @@ CONTEXT_HEADER = "Context (original)"
 OBSOLETE_HEADER = "Obsolete"
 OBSOLETE_MARKER = "obsolete"
 
+# Excel's "Text" number format
+TEXT_FORMAT = "@"
+
 METADATA_HEADERS = (SOURCE_SINGULAR_HEADER, CONTEXT_HEADER, OBSOLETE_HEADER)
 
 
@@ -107,6 +110,20 @@ def apply_empty_borders(ws: Worksheet, translation_col: int, num_cols: int) -> N
                 for r in range(group_start + 1, group_end):
                     ws.cell(row=r, column=col).border = EMPTY_BORDER
                 ws.cell(row=group_end, column=col).border = EMPTY_BORDER_BOTTOM
+
+
+def format_as_text(ws: Worksheet, first_col: int, num_cols: int) -> None:
+    """
+    Format the data cells of the given columns as Text.
+
+    Excel then keeps what translators type as typed, instead of turning "1/2"
+    into a date, "42" into a number, or "=..." into a formula.
+    """
+    for row in ws.iter_rows(
+        min_row=2, min_col=first_col, max_col=first_col + num_cols - 1
+    ):
+        for cell in row:
+            cell.number_format = TEXT_FORMAT
 
 
 def apply_row_stripes(ws: Worksheet, data_start: int, data_end: int) -> None:
@@ -294,6 +311,8 @@ class SpreadsheetGenerator:
         if has_plurals:
             num_translation_cols = num_plurals
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
+
+        format_as_text(ws, first_col=4, num_cols=num_translation_cols)
 
         # Write out the Excel spreadsheet and return its generated filename.
         path = self.output_path(filename, context)
