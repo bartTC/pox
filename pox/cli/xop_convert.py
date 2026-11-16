@@ -10,11 +10,16 @@ from openpyxl import Workbook, load_workbook
 
 from pox.base import ArgumentFormatter, BaseConverter
 from pox.spreadsheet import (
+    COMMENT_HEADER,
     CONTEXT_HEADER,
+    FLAGS_HEADER,
     OBSOLETE_HEADER,
     OBSOLETE_MARKER,
     PO_HEADER_SHEET,
+    REFERENCES_HEADER,
     SOURCE_SINGULAR_HEADER,
+    TCOMMENT_HEADER,
+    parse_references,
 )
 from pox.styles import NOT_APPLICABLE_PATTERN, YELLOW
 from pox.utils import dedent
@@ -93,6 +98,11 @@ class SheetLayout:
     # replaces the context of obsolete entries.
     context_col: int | None
     obsolete_col: int | None
+    # Exports before these columns existed don't carry comments or flags
+    tcomment_col: int | None
+    comment_col: int | None
+    references_col: int | None
+    flags_col: int | None
     width: int
 
     @classmethod
@@ -109,6 +119,10 @@ class SheetLayout:
             singular_col=find(SOURCE_SINGULAR_HEADER),
             context_col=find(CONTEXT_HEADER),
             obsolete_col=find(OBSOLETE_HEADER),
+            tcomment_col=find(TCOMMENT_HEADER),
+            comment_col=find(COMMENT_HEADER),
+            references_col=find(REFERENCES_HEADER),
+            flags_col=find(FLAGS_HEADER),
             width=len(header),
         )
 
@@ -121,6 +135,22 @@ def row_to_entry(cells: tuple, layout: SheetLayout) -> polib.POEntry | None:
     if not row[0]:
         return None
 
+    entry = _row_to_bare_entry(cells, row, layout)
+    if layout.tcomment_col is not None:
+        entry.tcomment = row[layout.tcomment_col]
+    if layout.comment_col is not None:
+        entry.comment = row[layout.comment_col]
+    if layout.references_col is not None:
+        entry.occurrences = parse_references(row[layout.references_col])
+    if layout.flags_col is not None:
+        entry.flags = [f.strip() for f in row[layout.flags_col].split(",") if f.strip()]
+    return entry
+
+
+def _row_to_bare_entry(
+    cells: tuple, row: list[str], layout: SheetLayout
+) -> polib.POEntry:
+    """Build a PO entry's context, msgids and translations from a sheet row."""
     if layout.context_col is not None and layout.obsolete_col is not None:
         context = row[layout.context_col] or None
         obsolete = bool(row[layout.obsolete_col])

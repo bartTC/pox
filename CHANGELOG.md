@@ -36,6 +36,9 @@
 - The import restores every PO header field (`Project-Id-Version`,
   `Last-Translator`, and so on), stored in a hidden "PO Header" sheet.
   Previously only `Content-Type` and `Language` were written.
+- The import keeps translator comments, developer comments, `#:` references
+  and `#,` flags, stored in hidden columns. The `fuzzy` flag is dropped, since
+  the imported translation counts as reviewed.
 
 ## 1.1.0
 

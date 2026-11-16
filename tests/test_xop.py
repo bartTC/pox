@@ -557,7 +557,15 @@ def test_metadata_columns_are_hidden(tmp_path: Path) -> None:
     wb = load_workbook(str(xlsx_path))
     ws = wb.worksheets[0]
     hidden = [c.value for c in ws[1] if ws.column_dimensions[c.column_letter].hidden]
-    assert hidden == ["Source Language (singular)", "Context (original)", "Obsolete"]
+    assert hidden == [
+        "Source Language (singular)",
+        "Context (original)",
+        "Obsolete",
+        "Translator Comment",
+        "Developer Comment",
+        "References",
+        "Flags",
+    ]
     wb.close()
 
 
@@ -622,3 +630,71 @@ def test_po_header_value_starting_with_equals(tmp_path: Path) -> None:
     )
     po = _import(tmp_path, xlsx_path)
     assert po.metadata["X-Note"] == "=keep me"
+
+
+COMMENTED_PO = """# Translator note
+# spanning two lines
+#. Developer note
+#: app/views.py:12 app/models.py:3 templates/base.html
+#: docs/file:with:colons.txt:7 docs/a:b.html
+#, python-format, no-wrap
+msgid "Hello %(name)s"
+msgstr "Hallo %(name)s"
+
+#, fuzzy, python-format
+msgid "Maybe %(name)s"
+msgstr "Vielleicht %(name)s"
+
+msgid "Plain"
+msgstr "Schlicht"
+"""
+
+
+def test_comments_references_and_flags_survive_roundtrip(tmp_path: Path) -> None:
+    """Comments, "#:" references and "#," flags come back unchanged."""
+    po_path = tmp_path / "input.po"
+    po_path.write_text(PO_HEADER + COMMENTED_PO)
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(po_path)
+    )
+    po = _import(tmp_path, xlsx_path)
+
+    hello = po.find("Hello %(name)s")
+    assert hello.tcomment == "Translator note\nspanning two lines"
+    assert hello.comment == "Developer note"
+    assert hello.occurrences == [
+        ("app/views.py", "12"),
+        ("app/models.py", "3"),
+        ("templates/base.html", ""),
+        ("docs/file:with:colons.txt", "7"),
+        ("docs/a:b.html", ""),
+    ]
+    assert hello.flags == ["python-format", "no-wrap"]
+
+    plain = po.find("Plain")
+    assert (plain.tcomment, plain.comment, plain.occurrences, plain.flags) == (
+        "",
+        "",
+        [],
+        [],
+    )
+
+
+def test_fuzzy_flag_is_dropped_on_import(tmp_path: Path) -> None:
+    """An exported fuzzy entry comes back reviewed: no fuzzy, other flags kept."""
+    po_path = tmp_path / "input.po"
+    po_path.write_text(PO_HEADER + COMMENTED_PO)
+    gen = SpreadsheetGenerator(outdir=tmp_path)
+    xlsx_path = gen.generate(
+        filename="test_{lang}.xlsx", context=build_context(po_path)
+    )
+    po = _import(tmp_path, xlsx_path)
+    assert po.find("Maybe %(name)s").flags == ["python-format"]
+
+
+def test_legacy_sheet_has_no_comments_or_flags(tmp_path: Path) -> None:
+    """Old sheets don't carry comments or flags, so entries come back without."""
+    po = _import(tmp_path, LEGACY_XLSX)
+    for e in po:
+        assert (e.tcomment, e.comment, e.occurrences, e.flags) == ("", "", [], [])

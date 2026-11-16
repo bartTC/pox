@@ -50,6 +50,10 @@ def collect_messages(pofile: polib.POFile, *, skip_fuzzy: bool) -> list[Message]
                 comment=item.comment,
                 tcomment=item.tcomment,
                 obsolete=item.obsolete == 1,
+                occurrences=tuple(item.occurrences),
+                # Fuzzy entries are dropped or included per --fuzzy; either
+                # way the imported translation is no longer fuzzy.
+                flags=tuple(f for f in item.flags if f != "fuzzy"),
             ),
         )
     return messages

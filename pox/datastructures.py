@@ -31,6 +31,8 @@ class Message:
     comment: str | None  # Code comment
     tcomment: str | None  # Translator comment
     obsolete: bool
+    occurrences: tuple[tuple[str, str], ...] = ()  # (file, line) of "#:" lines
+    flags: tuple[str, ...] = ()  # "#," flags, without "fuzzy"
 
     @cached_property
     def is_plural(self) -> bool:

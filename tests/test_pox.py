@@ -2,9 +2,14 @@
 
 from pathlib import Path
 
+import pytest
 from openpyxl import load_workbook
 
-from pox.spreadsheet import SpreadsheetGenerator
+from pox.spreadsheet import (
+    SpreadsheetGenerator,
+    format_references,
+    parse_references,
+)
 
 from .conftest import FIXTURES, build_context
 
@@ -285,3 +290,21 @@ def test_translation_cells_are_formatted_as_text(tmp_path: Path) -> None:
         assert "@" not in formats[:3] + formats[6:]
     assert ws[1][3].number_format != "@"  # header row
     wb.close()
+
+
+@pytest.mark.parametrize(
+    "occurrences",
+    [
+        pytest.param((), id="none"),
+        pytest.param((("app/views.py", "12"),), id="file-and-line"),
+        pytest.param((("templates/base.html", ""),), id="file-only"),
+        pytest.param((("docs/a:b.html", ""),), id="colon-in-name-no-line"),
+        pytest.param((("C:/proj/x.py", "7"),), id="colon-in-name-with-line"),
+        pytest.param((("a.py", "1"), ("b.py", "")), id="several"),
+    ],
+)
+def test_references_format_and_parse_back(
+    occurrences: tuple[tuple[str, str], ...],
+) -> None:
+    """References written to a cell parse back to the same (file, line) pairs."""
+    assert parse_references(format_references(occurrences)) == list(occurrences)

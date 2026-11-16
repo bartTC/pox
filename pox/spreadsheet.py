@@ -42,7 +42,36 @@ TEXT_FORMAT = "@"
 # properties would be simpler, but Excel limits their values to 255 characters.
 PO_HEADER_SHEET = "PO Header"
 
-METADATA_HEADERS = (SOURCE_SINGULAR_HEADER, CONTEXT_HEADER, OBSOLETE_HEADER)
+# Headers of hidden columns carrying the rest of each entry through the
+# roundtrip: "#" and "#." comments, "#:" references, and "#," flags.
+TCOMMENT_HEADER = "Translator Comment"
+COMMENT_HEADER = "Developer Comment"
+REFERENCES_HEADER = "References"
+FLAGS_HEADER = "Flags"
+
+METADATA_HEADERS = (
+    SOURCE_SINGULAR_HEADER,
+    CONTEXT_HEADER,
+    OBSOLETE_HEADER,
+    TCOMMENT_HEADER,
+    COMMENT_HEADER,
+    REFERENCES_HEADER,
+    FLAGS_HEADER,
+)
+
+
+def format_references(occurrences: tuple[tuple[str, str], ...]) -> str:
+    """Return "#:" references as one "file:line" (or "file") per line."""
+    return "\n".join(f"{f}:{line}" if line else f for f, line in occurrences)
+
+
+def parse_references(text: str) -> list[tuple[str, str]]:
+    """Turn format_references() output back into (file, line) pairs."""
+    result = []
+    for ref in text.splitlines():
+        path, sep, line = ref.rpartition(":")
+        result.append((path, line) if sep and line.isdigit() else (ref, ""))
+    return result
 
 
 def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
@@ -205,14 +234,27 @@ class SpreadsheetGenerator:
                 hint = plural_hints.get(i, f"Plural Form {i + 1}")
                 header.append((f"Translation ({hint})", S.HEADER))
             header.append((SOURCE_SINGULAR_HEADER, S.HEADER))
-        header.append((CONTEXT_HEADER, S.HEADER))
-        header.append((OBSOLETE_HEADER, S.HEADER))
+        header.extend(
+            (h, S.HEADER)
+            for h in (
+                CONTEXT_HEADER,
+                OBSOLETE_HEADER,
+                TCOMMENT_HEADER,
+                COMMENT_HEADER,
+                REFERENCES_HEADER,
+                FLAGS_HEADER,
+            )
+        )
 
         data = []
         for i, m in enumerate(messages):
             metadata = [
                 (m.context, S.MSG_ID),
                 (OBSOLETE_MARKER if m.obsolete else "", S.MSG_ID),
+                (m.tcomment, S.MSG_ID),
+                (m.comment, S.MSG_ID),
+                (format_references(m.occurrences), S.MSG_ID),
+                (", ".join(m.flags), S.MSG_ID),
             ]
             msg_str_style = S.MSG_ID
             if m.obsolete:
