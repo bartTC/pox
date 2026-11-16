@@ -11,7 +11,12 @@ from openpyxl.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
 from . import __version__
-from .datastructures import Message, SpreadsheetContext
+from .datastructures import (
+    Message,
+    PluralTranslation,
+    SingularTranslation,
+    SpreadsheetContext,
+)
 from .styles import (
     EMPTY_BORDER,
     EMPTY_BORDER_BOTTOM,
@@ -256,22 +261,24 @@ class SpreadsheetGenerator:
                 (format_references(m.occurrences), S.MSG_ID),
                 (", ".join(m.flags), S.MSG_ID),
             ]
+            t = m.translation
             msg_str_style = S.MSG_ID
             if m.obsolete:
                 msg_str_style = S.MSG_STR_OBSOLETE
-            elif not m.is_plural and m.translation.msgstr == "":
+            elif isinstance(t, SingularTranslation) and t.msgstr == "":
                 msg_str_style = S.MSG_STR_EMPTY
 
-            if m.is_plural:
+            row: list[tuple[Any, S]]
+            if isinstance(t, PluralTranslation):
                 # For plural messages, the first translation is form 0 (singular),
                 # the second is form 1 (plural), and any additional go into extra cols.
-                msgstr_dict = m.translation.msgstr
+                msgstr_dict = t.msgstr
 
                 # Check if any plural form is empty
                 if any(v == "" for v in msgstr_dict.values()):
                     msg_str_style = S.MSG_STR_EMPTY
 
-                source = f"{m.translation.msgid}\n{m.translation.msgid_plural}"
+                source = f"{t.msgid}\n{t.msgid_plural}"
                 row = [
                     (i + 1, S.ID),
                     (OBSOLETE_MARKER if m.obsolete else m.context, S.CONTEXT),
@@ -282,22 +289,19 @@ class SpreadsheetGenerator:
                     (msgstr_dict.get(pi, ""), msg_str_style)
                     for pi in range(1, num_plurals)
                 )
-                row.append((m.translation.msgid, S.MSG_ID))
-                row.extend(metadata)
-
-                data.append(row)
+                row.append((t.msgid, S.MSG_ID))
             else:
-                data.append(
-                    [
-                        (i + 1, S.ID),
-                        (OBSOLETE_MARKER if m.obsolete else m.context, S.CONTEXT),
-                        (m.translation.msgid, S.MSG_ID),
-                        (m.translation.msgstr, msg_str_style),
-                    ]
-                    + [("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols
-                    + ([("", S.MSG_ID)] if has_plurals else [])
-                    + metadata,
-                )
+                row = [
+                    (i + 1, S.ID),
+                    (OBSOLETE_MARKER if m.obsolete else m.context, S.CONTEXT),
+                    (t.msgid, S.MSG_ID),
+                    (t.msgstr, msg_str_style),
+                ]
+                row.extend([("", S.MSG_STR_NOT_APPLICABLE)] * extra_cols)
+                if has_plurals:
+                    row.append(("", S.MSG_ID))
+            row.extend(metadata)
+            data.append(row)
 
         return [
             header,

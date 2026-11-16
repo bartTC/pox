@@ -3,10 +3,11 @@
 import argparse
 import sys
 from enum import Enum
-from typing import Any
+from typing import Any, NoReturn
 
 from .utils import box_message
 from .warnings import ConversionError as E
+from .warnings import ConversionErrorDescription as D
 
 # Width of the help description
 ARGPARSE_TERMINAL_WIDTH = 78
@@ -34,7 +35,7 @@ class ConverterError(Exception):
 class BaseConverter:
     """Provide common logging and error handling for converters."""
 
-    def fail(self, message: str | E, icon: str | None = "❌️") -> None:
+    def fail(self, message: str | E, icon: str | None = "❌️") -> NoReturn:
         """Print an error message and raise ConverterError."""
         icon = f"{icon} " if icon else ""
         message = message.value if isinstance(message, Enum) else message
@@ -56,7 +57,7 @@ class BaseConverter:
         sys.stdout.write(f"{icon}{message}\n")
         sys.stdout.flush()
 
-    def display_messages(self, messages: list[E]) -> None:
+    def display_messages(self, messages: list[D]) -> None:
         """Display accumulated warning messages."""
         issues = "\n\n".join([box_message(w.value) for w in set(messages)])
         sys.stderr.write(

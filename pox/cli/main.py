@@ -153,19 +153,19 @@ def main() -> None:
 
     if options.command == "export":
         try:
-            convert = Po2ExcelConverter(options=options)
+            exporter = Po2ExcelConverter(options=options)
         except ConverterError:
             sys.exit(1)
 
         try:
-            asyncio.run(convert.run())
+            asyncio.run(exporter.run())
         except* ConverterError:
             sys.exit(1)
 
     else:  # "import", argparse allows no other command
         try:
-            convert = Excel2PoConverter(options=options)
-            convert.run()
+            importer = Excel2PoConverter(options=options)
+            importer.run()
         except ConverterError:
             sys.exit(1)
 
