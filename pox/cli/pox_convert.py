@@ -61,12 +61,15 @@ class Po2ExcelConverter(BaseConverter):
     options: argparse.Namespace
     po_files: list[Path]
     warning_descriptions: list[D]
+    # Output path -> PO file it was written from, to catch overwrites
+    outputs: dict[Path, Path]
 
     def __init__(self, options: argparse.Namespace) -> None:
         """Create a new converter instance and run preflight checks."""
         self.options = options
         self.po_files = []
         self.warning_descriptions = []
+        self.outputs = {}
 
         # Make sure, the output directory exists and is a directory
         if options.outdir and (not options.outdir.is_dir()):
@@ -150,6 +153,15 @@ class Po2ExcelConverter(BaseConverter):
 
         # Convert to a spreadsheet.
         xlsx = SpreadsheetGenerator(outdir=self.options.outdir)
+
+        # Files share an output when they have the same language, or when the
+        # filename has no {lang}. Keep the first instead of overwriting it.
+        out = xlsx.output_path(self.options.filename, context).resolve()
+        if other := self.outputs.get(out):
+            self.warning(E.SAME_OUTPUT.value.format(p=path, other=other, out=out))
+            return
+        self.outputs[out] = path
+
         filename = xlsx.generate(filename=self.options.filename, context=context)
 
         self.ok(f"Created {filename}")

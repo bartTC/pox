@@ -27,6 +27,9 @@
 - Fixed import dropping the `Plural-Forms` header, which made `msgfmt --check`
   fail and gettext fall back to its two-form rule. Spreadsheets from older
   versions don't contain it, so files imported from them still lack it.
+- Fixed `export` silently overwriting a spreadsheet when several `.po` files
+  have the same language, or the filename has no `{lang}`. The first file is
+  kept and the others are skipped with a warning.
 
 ## 1.1.0
 

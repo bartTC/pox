@@ -296,9 +296,13 @@ class SpreadsheetGenerator:
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)
 
         # Write out the Excel spreadsheet and return its generated filename.
-        filename = self.outdir / filename.format(
+        path = self.output_path(filename, context)
+        wb.save(path)
+        return path
+
+    def output_path(self, filename: str, context: SpreadsheetContext) -> Path:
+        """Return where generate() writes the spreadsheet for this context."""
+        return self.outdir / filename.format(
             lang=context.language,
             date=context.created.strftime("%Y-%m-%d"),
         )
-        wb.save(filename)
-        return filename

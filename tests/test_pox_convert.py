@@ -223,19 +223,42 @@ def test_several_files_each_get_a_spreadsheet(tmp_path: Path) -> None:
     assert sorted(p.name for p in tmp_path.glob("*.xlsx")) == ["de.xlsx", "pl.xlsx"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Bug: two PO files with the same language silently overwrite one "
-    "spreadsheet. Expected a warning or an error.",
-)
-def test_same_language_files_do_not_silently_overwrite(
+def test_same_language_files_do_not_overwrite(
     tmp_path: Path, locales: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """Two PO files with the same language don't silently share one output."""
-    shutil.copy(locales / "pl" / "django.po", locales / "pl" / "other.po")
+    """A second PO file with the same language is skipped, not written over."""
+    first = locales / "pl" / "django.po"
+    second = locales / "pl" / "other.po"
+    second.write_text(first.read_text().replace('"Hallo"', '"Servus"'))
+
     conv = _converter(tmp_path, f"{locales}/pl/*.po")
     asyncio.run(conv.run())
-    assert capsys.readouterr().err
+
+    # django.po sorts first and wins; other.po is skipped with a warning
+    wb = load_workbook(str(tmp_path / "de.xlsx"), read_only=True)
+    translations = [r[3] for r in wb.worksheets[0].iter_rows(values_only=True)]
+    wb.close()
+    assert "Hallo" in translations
+    assert "Servus" not in translations
+    err = capsys.readouterr().err
+    assert f'Skipped "{second.resolve()}"' in err
+    assert f'"{first.resolve()}" already writes' in err
+
+
+def test_filename_without_lang_does_not_overwrite(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A filename without {lang} can't hold several languages; extras are skipped."""
+    opts = argparse.Namespace(
+        po_file=[str(FIXTURES / "singular.po"), str(FIXTURES / "plurals_polish.po")],
+        outdir=tmp_path,
+        filename="translations.xlsx",
+        language=None,
+        fuzzy="stop",
+    )
+    asyncio.run(Po2ExcelConverter(options=opts).run())
+    assert [p.name for p in tmp_path.glob("*.xlsx")] == ["translations.xlsx"]
+    assert "Skipped" in capsys.readouterr().err
 
 
 def test_empty_po_exports_header_only(tmp_path: Path) -> None:
