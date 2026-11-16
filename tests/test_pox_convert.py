@@ -170,7 +170,8 @@ def test_missing_language_skips_file(
     assert not list(tmp_path.glob("*.xlsx"))
     out = capsys.readouterr()
     assert 'has no "Language" set' in out.err
-    assert "--locale" in out.out + out.err  # the detailed description
+    # The detailed description names the real option, with a working command
+    assert "pox-convert export path/to/messages.po --language=pt_BR" in out.err
 
 
 @pytest.mark.parametrize(

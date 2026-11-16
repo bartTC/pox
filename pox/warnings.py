@@ -49,9 +49,9 @@ class ConversionErrorDescription(enum.Enum):
 
         See https://www.gnu.org/software/gettext/manual/html_node/Header-Entry.html.
 
-        You can bypass this by providing a `--locale` argument, however
+        You can bypass this by providing a `--language` argument, however
         this works only for single po files:
 
-          pox-convert path/to/messages.po --locale=pt_BR
+          pox-convert export path/to/messages.po --language=pt_BR
         """,
     )
