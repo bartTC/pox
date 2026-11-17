@@ -65,7 +65,10 @@ def test_latvian() -> None:
 
 def test_slovenian() -> None:
     """Slovenian: four forms with modulo 100 checks."""
-    expr = "(n % 100 == 1) ? 1 : (n % 100 == 2) ? 2 : (n % 100 == 3 || n % 100 == 4) ? 3 : 0"
+    expr = (
+        "(n % 100 == 1) ? 1 : (n % 100 == 2) ? 2 : "
+        "(n % 100 == 3 || n % 100 == 4) ? 3 : 0"
+    )
 
     assert parse(expr, n=0) == 0
     assert parse(expr, n=1) == 1

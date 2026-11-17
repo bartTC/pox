@@ -65,24 +65,26 @@ dev = [
 
 [tool.ruff]
 target-version = "py311"
+lint.preview = true
+lint.explicit-preview-rules = true  # "ALL" must not pull in every preview rule
 lint.select = ["ALL"]
+lint.extend-select = [
+    "DOC402",  # `yield` missing from docstring
+    "DOC501",  # Raised exception missing from docstring
+    "PLR6201", # Membership test on a list or tuple literal instead of a set
+]
 lint.ignore = [
-    "COM812",  # Conflicts with ruff format
-    "CPY001",  # Missing copyright notice at top of file
-    "D203",    # incorrect-blank-line-before-class (conflicts with D211)
-    "D212",    # Don't require summary on first line
-    "E501",    # Line too long
-    "ERA001",  # Found commented-out code
-    "FBT",     # Boolean trap
-    "FIX",     # Line contains TODO/FIXME
-    "PLR0913", # Too many arguments
-    "PLR2004", # Magic value used in comparison
-    "S101",    # Use of assert
+    "COM812", # Conflicts with ruff format
+    "CPY001", # Missing copyright notice at top of file
+    "D203",   # incorrect-blank-line-before-class (conflicts with D211)
+    "D212",   # Don't require summary on first line
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [
-    "SLF001", # Allow private member access in tests
+    "PLR2004", # Magic value used in comparison
+    "S101",    # Use of assert
+    "SLF001",  # Allow private member access in tests
 ]
 
 [tool.pytest.ini_options]

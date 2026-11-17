@@ -82,7 +82,7 @@ def parse_references(text: str) -> list[tuple[str, str]]:
 def apply_styles(ws: Worksheet, row_idx: int, row_data: list | tuple) -> None:
     """Apply styles from (value, style) tuples to the cells of the given row."""
     for col_idx, cell_data in enumerate(row_data, start=1):
-        if not isinstance(cell_data, tuple) or len(cell_data) < 2:  # pragma: no cover
+        if not isinstance(cell_data, tuple) or len(cell_data) <= 1:  # pragma: no cover
             continue
         style = cell_data[1]
         cell = ws.cell(row=row_idx, column=col_idx)
@@ -216,7 +216,7 @@ class SpreadsheetGenerator:
         """
         plural_hints = context.plural_form_hints or {}
         num_plurals = len(plural_hints)
-        has_plurals = num_plurals >= 2 and any(m.is_plural for m in messages)
+        has_plurals = num_plurals > 1 and any(m.is_plural for m in messages)
 
         # Extra columns beyond the base "Translation" column (which holds form 0)
         extra_cols = num_plurals - 1 if has_plurals else 0
@@ -365,7 +365,7 @@ class SpreadsheetGenerator:
         num_translation_cols = 1
         plural_hints = context.plural_form_hints or {}
         num_plurals = len(plural_hints)
-        has_plurals = num_plurals >= 2 and any(m.is_plural for m in context.messages)
+        has_plurals = num_plurals > 1 and any(m.is_plural for m in context.messages)
         if has_plurals:
             num_translation_cols = num_plurals
         apply_empty_borders(ws, translation_col=4, num_cols=num_translation_cols)

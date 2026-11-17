@@ -227,7 +227,7 @@ class Excel2PoConverter(BaseConverter):
         po.metadata["Language"] = language
 
         rows = list(ws.iter_rows())
-        if len(rows) < 2:
+        if len(rows) <= 1:
             self.fail(f'Not enough rows in "{path}".')
 
         layout = SheetLayout.from_header([c.value for c in rows[0]])

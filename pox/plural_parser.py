@@ -48,7 +48,13 @@ class Lexer:
         self.current_char = self.text[self.pos] if self.text else None
 
     def error(self) -> NoReturn:
-        """Raise an error for an invalid character."""
+        """
+        Raise an error for an invalid character.
+
+        Raises:
+            ValueError: Always, naming the invalid character.
+
+        """
         msg = f"Invalid character: {self.current_char!r}"
         raise ValueError(msg)
 
@@ -90,7 +96,7 @@ class Lexer:
                 self.advance()
                 return Token("CMP_NEQ")
             return Token("OP_NOT")
-        if cmp_str in ("<", ">"):
+        if cmp_str in {"<", ">"}:
             type_ = "CMP_LT" if cmp_str == "<" else "CMP_GT"
             if self.current_char == "=":
                 self.advance()
@@ -125,7 +131,7 @@ class Lexer:
             self.advance()
             return token
 
-        if self.current_char in ("<", ">", "=", "!", "?", ":", "&", "|"):
+        if self.current_char in {"<", ">", "=", "!", "?", ":", "&", "|"}:
             return self.get_cmp()
 
         return self.error()
@@ -141,7 +147,13 @@ class Parser:
         self.current_token = self.lexer.get_token()
 
     def error(self) -> NoReturn:
-        """Raise an error for invalid syntax."""
+        """
+        Raise an error for invalid syntax.
+
+        Raises:
+            ValueError: Always, carrying the offending token.
+
+        """
         msg = "Invalid syntax"
         raise ValueError(msg, self.current_token)
 
@@ -152,7 +164,13 @@ class Parser:
         self.current_token = self.lexer.get_token()
 
     def factor(self) -> bool | int:
-        """Parse a factor: integer, variable, or parenthesized expression."""
+        """
+        Parse a factor: integer, variable, or parenthesized expression.
+
+        Raises:
+            ValueError: If the expression uses a variable that isn't defined.
+
+        """
         token = self.current_token
 
         if token.type == "LPAREN":
@@ -177,7 +195,7 @@ class Parser:
         """Parse multiplication, division, modulo, and power operations."""
         result = self.factor()
 
-        while self.current_token.type in ("MUL", "DIV", "MOD", "POW"):
+        while self.current_token.type in {"MUL", "DIV", "MOD", "POW"}:
             token = self.current_token
             self.eat(token.type)
             rhs = self.factor()
@@ -203,7 +221,7 @@ class Parser:
 
         result = self.term()
 
-        while self.current_token.type in ("ADD", "SUB"):
+        while self.current_token.type in {"ADD", "SUB"}:
             token = self.current_token
 
             if token.type == "ADD":
@@ -233,7 +251,7 @@ class Parser:
             self.eat("CMP_GT")
             result = result > self.term()
 
-        while self.current_token.type in ("OP_AND", "OP_OR"):
+        while self.current_token.type in {"OP_AND", "OP_OR"}:
             token = self.current_token
             self.eat()
             next_result = self.parse_expression()
@@ -295,7 +313,13 @@ def group(
     max_n: int = 999,
     per_group: int = 5,
 ) -> Generator[GroupDict, None, None]:
-    """Group numbers based on a plural line from a po file."""
+    """
+    Group numbers based on a plural line from a po file.
+
+    Yields:
+        One group per plural form, with the numbers that select it.
+
+    """
     nplurals, expr = parse_line(plural_line)
     groups: dict[int, list[int]] = {}
     for i in range(nplurals):

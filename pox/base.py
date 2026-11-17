@@ -36,7 +36,13 @@ class BaseConverter:
     """Provide common logging and error handling for converters."""
 
     def fail(self, message: str | E, icon: str | None = "❌️") -> NoReturn:
-        """Print an error message and raise ConverterError."""
+        """
+        Print an error message and raise ConverterError.
+
+        Raises:
+            ConverterError: Always, carrying the given message.
+
+        """
         icon = f"{icon} " if icon else ""
         message = message.value if isinstance(message, Enum) else message
         sys.stderr.write(f"{icon}{message}\n")

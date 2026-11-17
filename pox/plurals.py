@@ -20,7 +20,7 @@ RE_PLURAL_COUNT = re.compile(r"nplurals=(?P<num>\d+);")
 MAX_RANGE_PARTS = 2
 
 
-def _format_values(values: list[int], has_more: bool) -> str:
+def _format_values(values: list[int], *, has_more: bool) -> str:
     """Collapse consecutive integers into range notation: [1,2,3,5] → '1-3, 5'."""
     if not values:
         return ""
@@ -67,7 +67,7 @@ def get_plural_hints(plural_form: str | None) -> dict[int, str] | None:
     try:
         hints = {}
         for g in group(plural_form, per_group=1000):
-            formatted = _format_values(g["values"], g["has_more"])
+            formatted = _format_values(g["values"], has_more=g["has_more"])
             is_singular = 1 in g["values"]
             label = "Singular" if is_singular else "Plural"
             hints[g["group"]] = f"{label}, n = {formatted}"
